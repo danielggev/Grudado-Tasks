@@ -1,4 +1,6 @@
 import asyncio
+import os
+from collections.abc import Callable
 from logging.config import fileConfig
 
 from sqlalchemy.engine import Connection
@@ -45,7 +47,16 @@ async def run_migrations_online() -> None:
     await engine.dispose()
 
 
+def _fabrica_de_loop() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """No Windows o asyncio usa ProactorEventLoop, e o psycopg async nao roda
+    sobre ele -- sem isto, `alembic upgrade` falha nativamente no Windows.
+
+    Em producao nao muda nada: o container e Linux e cai no ramo padrao.
+    """
+    return asyncio.SelectorEventLoop if os.name == "nt" else None
+
+
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    asyncio.run(run_migrations_online(), loop_factory=_fabrica_de_loop())

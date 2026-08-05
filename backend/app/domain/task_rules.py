@@ -7,9 +7,10 @@ e sem banco. Ver tests/domain/.
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from uuid import UUID
 
 from app.domain.enums import TaskStatus
-from app.domain.errors import PrazoObrigatorioNoEngajamento
+from app.domain.errors import PrazoObrigatorioNoEngajamento, RegraDeDominioViolada
 
 STATUS_INICIAL = TaskStatus.A_FAZER
 
@@ -70,6 +71,58 @@ def aplica_transicao_de_status(
         due_date=prazo_final,
         completed_at=completed_at,
     )
+
+
+class ResponsavelForaDoTime(RegraDeDominioViolada):
+    def __init__(self) -> None:
+        super().__init__(
+            "So e possivel atribuir a tarefa a quem faz parte do time.",
+            campo="responsaveis",
+        )
+
+
+class SubtarefaNaoAceitaSubtarefa(RegraDeDominioViolada):
+    def __init__(self) -> None:
+        super().__init__(
+            "Uma subtarefa nao pode ter subtarefas. Quebre a tarefa principal.",
+            campo="parent_id",
+        )
+
+
+class TarefaNaoPodeSerPropriaMae(RegraDeDominioViolada):
+    def __init__(self) -> None:
+        super().__init__("Uma tarefa nao pode ser subtarefa de si mesma.", campo="parent_id")
+
+
+class SubtarefaDeOutroTime(RegraDeDominioViolada):
+    def __init__(self) -> None:
+        super().__init__(
+            "A subtarefa precisa pertencer ao mesmo time da tarefa principal.",
+            campo="parent_id",
+        )
+
+
+def valida_vinculo_de_subtarefa(
+    *,
+    task_id: UUID | None,
+    parent_id: UUID,
+    parent_tem_mae: bool,
+    parent_team_id: UUID,
+    team_id: UUID,
+) -> None:
+    """Regras de hierarquia. `task_id` e None quando a tarefa ainda vai ser criada.
+
+    A profundidade e limitada a um nivel de proposito: tarefa e subtarefa, nada
+    alem. A feature 3 materializa uma tarefa-mae e N subtarefas -- exatamente um
+    nivel -- e aceitar profundidade arbitraria exigiria CTE recursiva em toda
+    consulta de board para entregar algo que o produto nunca pediu.
+    """
+    if task_id is not None and task_id == parent_id:
+        raise TarefaNaoPodeSerPropriaMae()
+    if parent_tem_mae:
+        raise SubtarefaNaoAceitaSubtarefa()
+    if parent_team_id != team_id:
+        raise SubtarefaDeOutroTime()
 
 
 def e_tarefa_do_time(*, quantidade_de_responsaveis: int) -> bool:

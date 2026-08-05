@@ -13,7 +13,10 @@ FastAPI + React, banco Postgres, deploy em VPS com Docker Compose.
 | --- | --- | --- |
 | 0 | Fundação: domínio, auth, contrato de tipos, CI, deploy | ✅ pronta |
 | 1 | Feature 1 — criação de times, membros e RBAC | ✅ pronta |
-| 2 | Feature 2 — tarefas, board kanban, lista, tempo real | pendente |
+| 2a | Feature 2 — modelo, regras e API de tarefas | ✅ pronta |
+| 2b | Board kanban com drag-drop | pendente |
+| 2c | Lista com filtros e "minhas tarefas" | pendente |
+| 2d | Tempo real (WebSocket) | pendente |
 | 3 | Google SSO em produção e deploy no VPS | pendente |
 | 4 | Feature 3 — workflows que distribuem subtarefas | futuro |
 
@@ -125,6 +128,35 @@ de fora.
 
 É por isso que `RecursoNaoEncontrado` não herda de `AcessoNegado`: são status
 diferentes na borda, e herdar faria o 404 virar 403 silenciosamente.
+
+### Tarefas: as três regras que definem o produto
+
+**Prazo cobrado ao começar.** A tarefa pode nascer sem prazo e ficar em `a fazer`.
+Ao sair dessa coluna, o prazo passa a ser obrigatório — a API responde 422 com
+`campo: "due_date"` e o movimento não acontece. Não existe estado de aceite: a
+tarefa nasce ativa, e esse é o único momento em que dá para cobrar a data de
+quem assumiu.
+
+**Sem responsável = tarefa do time.** Zero linhas em `task_assignees` significa
+que a tarefa é do time inteiro, com um status só que qualquer membro altera. Não
+há progresso por pessoa; a autoria vem do log de atividade.
+
+**Um nível de hierarquia.** Tarefa e subtarefa, nada além. A feature 3 materializa
+uma tarefa-mãe e N subtarefas — exatamente um nível — e aceitar profundidade
+arbitrária exigiria CTE recursiva em toda consulta de board para entregar algo
+que o produto nunca pediu. Subtarefa não vira card próprio no board: aparece
+dentro da mãe, senão quebrar uma demanda em cinco partes poluiria a coluna com
+seis cards para o mesmo trabalho.
+
+### Ordenação do board sem reescrever a coluna
+
+Cada tarefa carrega uma `position` fracionária. Arrastar um card grava a média
+entre os dois vizinhos — **um update**, qualquer que seja o tamanho da coluna.
+
+O preço é que inserções sucessivas no mesmo ponto encolhem o intervalo até
+esgotar a precisão do float. Quando isso acontece, `calcula_posicao` sinaliza e o
+serviço reespaça a coluna antes de tentar de novo. É o único caminho que reescreve
+várias linhas, e por isso é a exceção e não a estratégia.
 
 ### Hierarquia de tarefas já no modelo
 

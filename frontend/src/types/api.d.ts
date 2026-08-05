@@ -78,6 +78,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tarefas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Criar Tarefa */
+        post: operations["criar_tarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Board Do Time */
+        get: operations["board_do_time"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/minhas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Minhas Tarefas */
+        get: operations["minhas_tarefas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Tarefa */
+        get: operations["obter_tarefa"];
+        put?: never;
+        post?: never;
+        /** Excluir Tarefa */
+        delete: operations["excluir_tarefa"];
+        options?: never;
+        head?: never;
+        /** Atualizar Tarefa */
+        patch: operations["atualizar_tarefa"];
+        trace?: never;
+    };
+    "/api/v1/tarefas/{task_id}/atividade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Atividade Da Tarefa */
+        get: operations["atividade_da_tarefa"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/{task_id}/mover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mover Tarefa
+         * @description Um gesto de arrastar. Devolve 422 se a tarefa sair de `a_fazer` sem prazo.
+         */
+        post: operations["mover_tarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/times": {
         parameters: {
             query?: never;
@@ -228,6 +335,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActivityAction
+         * @description Eventos registrados no log de atividade.
+         *
+         *     O log e o que devolve a rastreabilidade perdida ao adotar status unico
+         *     compartilhado em tarefa de time: o estado nao diz quem fez o que, o log diz.
+         * @enum {string}
+         */
+        ActivityAction: "tarefa_criada" | "tarefa_editada" | "tarefa_excluida" | "status_alterado" | "prazo_definido" | "prioridade_alterada" | "responsaveis_alterados";
         /** AdicionarMembro */
         AdicionarMembro: {
             /** @default member */
@@ -241,6 +357,25 @@ export interface components {
         /** AlterarPapel */
         AlterarPapel: {
             role: components["schemas"]["TeamRole"];
+        };
+        /** EventoDeAtividade */
+        EventoDeAtividade: {
+            action: components["schemas"]["ActivityAction"];
+            autor: components["schemas"]["UsuarioPublico"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -258,11 +393,149 @@ export interface components {
             usuario: components["schemas"]["UsuarioPublico"];
         };
         /**
+         * MoverTarefa
+         * @description Um gesto de arrastar: coluna de destino e onde soltou dentro dela.
+         */
+        MoverTarefa: {
+            /** Apos */
+            apos?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            status: components["schemas"]["TaskStatus"];
+        };
+        /**
          * OrgRole
          * @description Papel no nivel da organizacao.
          * @enum {string}
          */
         OrgRole: "admin" | "member";
+        /**
+         * TarefaAtualizar
+         * @description Campos omitidos ficam como estao (o servico usa `exclude_unset`).
+         */
+        TarefaAtualizar: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            priority?: components["schemas"]["TaskPriority"] | null;
+            /** Responsaveis */
+            responsaveis?: string[] | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** TarefaCriar */
+        TarefaCriar: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Parent Id */
+            parent_id?: string | null;
+            /** @default normal */
+            priority: components["schemas"]["TaskPriority"];
+            /** Responsaveis */
+            responsaveis?: string[];
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Title */
+            title: string;
+        };
+        /** TarefaDetalhe */
+        TarefaDetalhe: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            criada_por: components["schemas"]["UsuarioPublico"] | null;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** E Do Time */
+            e_do_time: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parent Id */
+            parent_id: string | null;
+            /** Position */
+            position: number;
+            priority: components["schemas"]["TaskPriority"];
+            /** Responsaveis */
+            responsaveis: components["schemas"]["UsuarioPublico"][];
+            status: components["schemas"]["TaskStatus"];
+            /** Subtarefas */
+            subtarefas: components["schemas"]["TarefaResumo"][];
+            /** Subtarefas Concluidas */
+            subtarefas_concluidas: number;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Title */
+            title: string;
+            /** Total De Subtarefas */
+            total_de_subtarefas: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TarefaResumo
+         * @description O card do board e a linha da lista.
+         */
+        TarefaResumo: {
+            /** Due Date */
+            due_date: string | null;
+            /** E Do Time */
+            e_do_time: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parent Id */
+            parent_id: string | null;
+            /** Position */
+            position: number;
+            priority: components["schemas"]["TaskPriority"];
+            /** Responsaveis */
+            responsaveis: components["schemas"]["UsuarioPublico"][];
+            status: components["schemas"]["TaskStatus"];
+            /** Subtarefas Concluidas */
+            subtarefas_concluidas: number;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Title */
+            title: string;
+            /** Total De Subtarefas */
+            total_de_subtarefas: number;
+        };
+        /**
+         * TaskPriority
+         * @enum {string}
+         */
+        TaskPriority: "urgente" | "alta" | "normal" | "baixa";
+        /**
+         * TaskStatus
+         * @enum {string}
+         */
+        TaskStatus: "a_fazer" | "em_andamento" | "bloqueado" | "concluido";
         /**
          * TeamRole
          * @description Papel dentro de um time.
@@ -487,6 +760,276 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsuarioAutenticado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    criar_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TarefaCriar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    board_do_time: {
+        parameters: {
+            query: {
+                team_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaResumo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    minhas_tarefas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaResumo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    excluir_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    atualizar_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TarefaAtualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    atividade_da_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventoDeAtividade"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mover_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoverTarefa"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaDetalhe"];
                 };
             };
             /** @description Validation Error */

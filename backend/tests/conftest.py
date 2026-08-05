@@ -94,3 +94,12 @@ async def cria_time_com_lead(
     sessao.add(TeamMember(team_id=time.id, user_id=lead.id, role=TeamRole.LEAD))
     await sessao.flush()
     return time
+
+
+async def adiciona_ao_time(
+    sessao: AsyncSession, *, time: Team, usuario: User, papel: TeamRole = TeamRole.MEMBER
+) -> TeamMember:
+    vinculo = TeamMember(team_id=time.id, user_id=usuario.id, role=papel)
+    sessao.add(vinculo)
+    await sessao.flush()
+    return vinculo
