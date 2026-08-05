@@ -1,8 +1,9 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { PaginaDeLogin } from "../features/auth/PaginaDeLogin";
 import { RotaProtegida } from "../features/auth/RotaProtegida";
-import { PaginaInicial } from "../features/inicio/PaginaInicial";
+import { DetalheDoTime } from "../features/teams/DetalheDoTime";
+import { ListaDeTimes } from "../features/teams/ListaDeTimes";
 import { Layout } from "./Layout";
 
 export const router = createBrowserRouter([
@@ -12,7 +13,11 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <Layout />,
-        children: [{ path: "/", element: <PaginaInicial /> }],
+        children: [
+          { index: true, element: <Navigate to="/times" replace /> },
+          { path: "times", element: <ListaDeTimes /> },
+          { path: "times/:teamId", element: <DetalheDoTime /> },
+        ],
       },
     ],
   },

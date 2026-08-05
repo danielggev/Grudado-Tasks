@@ -9,12 +9,10 @@ FastAPI + React, banco Postgres, deploy em VPS com Docker Compose.
 
 ## Estado atual
 
-Fase 0 (fundação) concluída. Times e tarefas entram nas fases seguintes.
-
 | Fase | Escopo | Situação |
 | --- | --- | --- |
 | 0 | Fundação: domínio, auth, contrato de tipos, CI, deploy | ✅ pronta |
-| 1 | Feature 1 — criação de times, membros e RBAC | pendente |
+| 1 | Feature 1 — criação de times, membros e RBAC | ✅ pronta |
 | 2 | Feature 2 — tarefas, board kanban, lista, tempo real | pendente |
 | 3 | Google SSO em produção e deploy no VPS | pendente |
 | 4 | Feature 3 — workflows que distribuem subtarefas | futuro |
@@ -61,6 +59,17 @@ npm run lint && npm run typecheck && npm test && npm run build
 Os testes de domínio não tocam banco nem rede — rodam em centésimos de segundo,
 que é justamente o retorno de manter as regras isoladas.
 
+Os testes marcados com `integracao` exigem um Postgres descartável e **pulam**
+sem ele. Para rodá-los:
+
+```bash
+DATABASE_URL_TESTE=postgresql+psycopg://grudado:grudado@localhost:5432/grudado_teste pytest -q
+```
+
+O CI sobe esse Postgres e roda a suíte inteira. Rodar essa parte em SQLite daria
+confiança falsa exatamente onde a costura com o banco importa (enum nativo,
+cascade, agregação).
+
 ---
 
 ## Decisões de arquitetura
@@ -88,6 +97,30 @@ que qualquer membro altera. Não há progresso por pessoa.
 
 O custo dessa escolha — não saber quem fez o quê — é pago pelo **log de
 atividade**, não por estado no schema.
+
+### Times: quem pode o quê
+
+Três papéis. `admin` da organização, `lead` do time, `member`.
+
+| Ação | admin | lead | member |
+| --- | :-: | :-: | :-: |
+| Criar time | ✅ | — | — |
+| Ver o time | ✅ | ✅ | ✅ |
+| Editar / arquivar o time | ✅ | ✅ | — |
+| Gerenciar membros e papéis | ✅ | ✅ | — |
+| Criar e editar tarefas do time | ✅ | ✅ | ✅ |
+| Excluir tarefa | ✅ | ✅ | — |
+
+Quem cria um time entra como lead dele, o que evita um time recém-criado sem
+ninguém capaz de gerenciá-lo.
+
+**Um time nunca fica sem lead.** Remover ou rebaixar o último lead é recusado —
+sem isso o time viraria refém de um admin para qualquer mudança de membro. A
+interface desabilita o controle antes do erro, mas quem garante é o backend.
+
+Quem não é do time recebe **404, não 403**, ao tentar acessá-lo. Distinguir
+"não existe" de "existe mas não é seu" contaria a quem está de fora quais times
+existem na empresa.
 
 ### Hierarquia de tarefas já no modelo
 

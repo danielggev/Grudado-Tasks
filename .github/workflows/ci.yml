@@ -12,6 +12,25 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    # Postgres de verdade: os testes marcados com `integracao` exercitam o
+    # dialeto real (enum nativo, cascade, contagem agregada). Rodar em SQLite
+    # daria confianca falsa justamente onde a costura com o banco importa.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: grudado
+          POSTGRES_PASSWORD: grudado
+          POSTGRES_DB: grudado_teste
+        options: >-
+          --health-cmd "pg_isready -U grudado -d grudado_teste"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,9 +40,9 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: mypy app tests
-      # Os testes de dominio nao tocam banco. Os marcados com `integracao`
-      # entram na fase 2, junto com um servico de Postgres aqui.
       - run: pytest -q
+        env:
+          DATABASE_URL_TESTE: postgresql+psycopg://grudado:grudado@localhost:5432/grudado_teste
 
   frontend:
     name: Frontend (lint, typecheck, test, build)

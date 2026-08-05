@@ -78,6 +78,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar Times */
+        get: operations["listar_times"];
+        put?: never;
+        /** Criar Time */
+        post: operations["criar_time"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Time */
+        get: operations["obter_time"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Atualizar Time */
+        patch: operations["atualizar_time"];
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/arquivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Arquivar Time */
+        post: operations["arquivar_time"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/membros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adicionar Membro */
+        post: operations["adicionar_membro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/membros/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remover Membro */
+        delete: operations["remover_membro"];
+        options?: never;
+        head?: never;
+        /** Alterar Papel Do Membro */
+        patch: operations["alterar_papel_do_membro"];
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/reativar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reativar Time */
+        post: operations["reativar_time"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usuarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar Usuarios
+         * @description Usuarios ativos da organizacao, para escolher responsaveis e membros.
+         *
+         *     Aberto a qualquer autenticado: numa empresa de 15 pessoas todo mundo ja se
+         *     conhece, e restringir isso so quebraria o seletor de membros sem proteger
+         *     nada que ja nao esteja no Workspace.
+         */
+        get: operations["listar_usuarios"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -99,10 +228,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdicionarMembro */
+        AdicionarMembro: {
+            /** @default member */
+            role: components["schemas"]["TeamRole"];
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** AlterarPapel */
+        AlterarPapel: {
+            role: components["schemas"]["TeamRole"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** MembroDoTime */
+        MembroDoTime: {
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            role: components["schemas"]["TeamRole"];
+            usuario: components["schemas"]["UsuarioPublico"];
         };
         /**
          * OrgRole
@@ -110,6 +263,71 @@ export interface components {
          * @enum {string}
          */
         OrgRole: "admin" | "member";
+        /**
+         * TeamRole
+         * @description Papel dentro de um time.
+         * @enum {string}
+         */
+        TeamRole: "lead" | "member";
+        /**
+         * TimeAtualizar
+         * @description Campos ausentes ficam como estao.
+         *
+         *     O servico usa `exclude_unset`, entao `description: null` limpa a descricao e
+         *     omitir o campo a preserva -- que sao coisas diferentes e precisam continuar
+         *     sendo.
+         */
+        TimeAtualizar: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** TimeCriar */
+        TimeCriar: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+        };
+        /** TimeDetalhe */
+        TimeDetalhe: {
+            /** Archived At */
+            archived_at: string | null;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Membros */
+            membros: components["schemas"]["MembroDoTime"][];
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Total De Membros */
+            total_de_membros: number;
+        };
+        /** TimeResumo */
+        TimeResumo: {
+            /** Archived At */
+            archived_at: string | null;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Total De Membros */
+            total_de_membros: number;
+        };
         /**
          * UsuarioAutenticado
          * @description Usuario como ele mesmo se ve: inclui o que a interface usa para decidir o
@@ -136,6 +354,26 @@ export interface components {
             times: string[];
             /** Times Como Lead */
             times_como_lead: string[];
+        };
+        /**
+         * UsuarioPublico
+         * @description Usuario como aparece para os outros: em avatar, lista de responsaveis, autoria.
+         */
+        UsuarioPublico: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -249,6 +487,348 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsuarioAutenticado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_times: {
+        parameters: {
+            query?: {
+                incluir_arquivados?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeResumo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    criar_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimeCriar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    atualizar_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimeAtualizar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    arquivar_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adicionar_membro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdicionarMembro"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembroDoTime"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remover_membro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                user_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alterar_papel_do_membro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                user_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlterarPapel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembroDoTime"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reativar_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeDetalhe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_usuarios: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsuarioPublico"][];
                 };
             };
             /** @description Validation Error */
