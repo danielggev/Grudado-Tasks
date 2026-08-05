@@ -2,7 +2,10 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { useEncerrarSessao, useUsuarioAtual } from "../features/auth/hooks";
 
-const ITENS = [{ para: "/times", rotulo: "Times" }];
+const ITENS = [
+  { para: "/minhas-tarefas", rotulo: "Minhas tarefas" },
+  { para: "/times", rotulo: "Times" },
+];
 
 export function Layout() {
   const { data: usuario } = useUsuarioAtual();
