@@ -4,11 +4,15 @@ import { Botao } from "../../components/ui/Botao";
 import { Board } from "./Board";
 import { DetalheDaTarefa } from "./DetalheDaTarefa";
 import { DialogoDeTarefa } from "./DialogoDeTarefa";
+import { useSincronizacaoDoTime } from "./hooks";
 import { ListaDoTime } from "./ListaDoTime";
 
 type Visao = "board" | "lista";
 
 export function BoardDoTime({ teamId }: { teamId: string }) {
+  // Board e lista compartilham a query, entao uma assinatura so cobre as duas.
+  useSincronizacaoDoTime(teamId);
+
   const [visao, setVisao] = useState<Visao>("board");
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
   const [criando, setCriando] = useState<{ parentId?: string } | null>(null);

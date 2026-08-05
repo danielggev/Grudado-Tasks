@@ -14,9 +14,9 @@ FastAPI + React, banco Postgres, deploy em VPS com Docker Compose.
 | 0 | Fundação: domínio, auth, contrato de tipos, CI, deploy | ✅ pronta |
 | 1 | Feature 1 — criação de times, membros e RBAC | ✅ pronta |
 | 2a | Feature 2 — modelo, regras e API de tarefas | ✅ pronta |
-| 2b | Board kanban com drag-drop | pendente |
-| 2c | Lista com filtros e "minhas tarefas" | pendente |
-| 2d | Tempo real (WebSocket) | pendente |
+| 2b | Board kanban com drag-drop | ✅ pronta |
+| 2c | Lista com filtros e "minhas tarefas" | ✅ pronta |
+| 2d | Tempo real (WebSocket) | ✅ pronta |
 | 3 | Google SSO em produção e deploy no VPS | pendente |
 | 4 | Feature 3 — workflows que distribuem subtarefas | futuro |
 
@@ -208,13 +208,35 @@ mas é configuração de console: pode mudar, e o app não tem como saber. A
 verificação da claim `hd` roda no servidor a cada login e não depende de nada
 externo. É a única que não pode ser contornada.
 
-### Tempo real: limitação assumida
+### Tempo real
 
-O hub de WebSocket é in-memory, então **não faz broadcast entre múltiplos workers
-uvicorn**. Por isso o Dockerfile fixa `--workers 1`.
+O board atualiza ao vivo: quando alguém move um card, os colegas com a tela
+aberta veem a mudança sem recarregar.
 
-Para ~15 pessoas, um worker sobra. O hub fica atrás de uma interface para que
-Redis pub/sub entre sem tocar nos serviços, caso um dia precise escalar.
+**O evento não carrega estado** — diz só "algo mudou no time X". O cliente
+invalida a query e refetcha pela mesma API REST. Isso mantém uma fonte de
+verdade só e evita serializar tarefa em dois lugares (JSON da API e payload do
+socket), que é onde os dois inevitavelmente divergem.
+
+Autenticação é o mesmo cookie `HttpOnly` do resto da API — o navegador o envia
+no handshake. Não há token na URL: URL vaza em log, cookie não. A autorização é
+a mesma do board: quem não vê o time não assina o canal dele.
+
+Publicação via `BackgroundTasks`, que rodam **depois** do commit da sessão.
+Publicar dentro do serviço seria uma corrida — o cliente receberia o aviso,
+refetcharia, e poderia ler o estado de antes do commit.
+
+O cliente reconecta com backoff exponencial (1s → 30s). Sem isso, uma queda de
+rede ou um deploy deixaria o board silenciosamente parado, que é o pior modo de
+falha possível para tempo real.
+
+#### Limitação assumida
+
+O hub é in-memory, então **não faz broadcast entre múltiplos workers uvicorn**.
+Por isso o Dockerfile fixa `--workers 1`.
+
+Para ~15 pessoas, um worker sobra. O hub fica atrás de um `Protocol` para que
+Redis pub/sub entre sem tocar em quem publica, caso um dia precise escalar.
 
 É escolha, não descuido — e subir para 2 workers quebraria a atualização ao vivo
 do board.

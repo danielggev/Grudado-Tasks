@@ -2,12 +2,13 @@ from collections.abc import Sequence
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, BackgroundTasks, Query, status
 
 from app.api.v1.deps import ContextoDep, SessaoDep
 from app.db.models import ActivityLog, Task
 from app.domain.enums import TaskStatus
 from app.domain.task_rules import e_tarefa_do_time
+from app.realtime.notify import notifica_tarefas
 from app.schemas.task import (
     EventoDeAtividade,
     MoverTarefa,
@@ -40,9 +41,11 @@ async def board_do_time(
 
 @router.post("", status_code=status.HTTP_201_CREATED, name="criar_tarefa")
 async def criar_tarefa(
-    session: SessaoDep, ctx: ContextoDep, dados: TarefaCriar
+    session: SessaoDep, ctx: ContextoDep, dados: TarefaCriar, background: BackgroundTasks
 ) -> TarefaDetalhe:
-    return _detalhe(await task_service.cria_tarefa(session, ctx, dados))
+    tarefa = await task_service.cria_tarefa(session, ctx, dados)
+    notifica_tarefas(background, tarefa.team_id)
+    return _detalhe(tarefa)
 
 
 @router.get("/{task_id}", name="obter_tarefa")
@@ -54,24 +57,42 @@ async def obter_tarefa(
 
 @router.patch("/{task_id}", name="atualizar_tarefa")
 async def atualizar_tarefa(
-    session: SessaoDep, ctx: ContextoDep, task_id: UUID, dados: TarefaAtualizar
+    session: SessaoDep,
+    ctx: ContextoDep,
+    task_id: UUID,
+    dados: TarefaAtualizar,
+    background: BackgroundTasks,
 ) -> TarefaDetalhe:
-    return _detalhe(await task_service.atualiza_tarefa(session, ctx, task_id, dados))
+    tarefa = await task_service.atualiza_tarefa(session, ctx, task_id, dados)
+    notifica_tarefas(background, tarefa.team_id)
+    return _detalhe(tarefa)
 
 
 @router.post("/{task_id}/mover", name="mover_tarefa")
 async def mover_tarefa(
-    session: SessaoDep, ctx: ContextoDep, task_id: UUID, dados: MoverTarefa
+    session: SessaoDep,
+    ctx: ContextoDep,
+    task_id: UUID,
+    dados: MoverTarefa,
+    background: BackgroundTasks,
 ) -> TarefaDetalhe:
     """Um gesto de arrastar. Devolve 422 se a tarefa sair de `a_fazer` sem prazo."""
-    return _detalhe(await task_service.move_tarefa(session, ctx, task_id, dados))
+    tarefa = await task_service.move_tarefa(session, ctx, task_id, dados)
+    notifica_tarefas(background, tarefa.team_id)
+    return _detalhe(tarefa)
 
 
 @router.delete(
     "/{task_id}", status_code=status.HTTP_204_NO_CONTENT, name="excluir_tarefa"
 )
-async def excluir_tarefa(session: SessaoDep, ctx: ContextoDep, task_id: UUID) -> None:
+async def excluir_tarefa(
+    session: SessaoDep, ctx: ContextoDep, task_id: UUID, background: BackgroundTasks
+) -> None:
+    # O team_id sai antes da exclusao; depois dela a tarefa nao existe mais.
+    tarefa = await task_service.obtem_tarefa(session, ctx, task_id)
+    team_id = tarefa.team_id
     await task_service.exclui_tarefa(session, ctx, task_id)
+    notifica_tarefas(background, team_id)
 
 
 @router.get("/{task_id}/atividade", name="atividade_da_tarefa")

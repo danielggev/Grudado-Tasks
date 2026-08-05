@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
 from app.api.v1.router import router as router_v1
+from app.api.v1.ws import router as ws_router
 from app.auth.errors import AutenticacaoFalhou
 from app.config import get_settings
 from app.domain.errors import AcessoNegado, RecursoNaoEncontrado, RegraDeDominioViolada
@@ -87,6 +88,10 @@ def create_app() -> FastAPI:
     app.add_exception_handler(AutenticacaoFalhou, _erro_de_autenticacao)
 
     app.include_router(router_v1, prefix="/api/v1")
+
+    # WebSocket fora do /api/v1: o Caddy faz proxy de /ws separadamente, e
+    # versionar um canal de eventos magros nao compraria nada.
+    app.include_router(ws_router)
 
     @app.get("/health", tags=["infra"], name="health")
     async def health() -> dict[str, str]:

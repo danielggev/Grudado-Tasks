@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { ApiError } from "../../lib/api-client";
+import { conectaAoCanal } from "../../lib/ws-client";
 import {
   atualizaTarefa,
   atividadeDaTarefa,
@@ -130,4 +132,29 @@ export function useMoverTarefa(teamId: string) {
 export function erroDePrazoObrigatorio(erro: unknown): string | null {
   if (erro instanceof ApiError && erro.campo === "due_date") return erro.message;
   return null;
+}
+
+/**
+ * Mantem o board sincronizado com o que os colegas fazem.
+ *
+ * O evento do servidor nao carrega estado -- so avisa que algo mudou naquele
+ * time. Invalidar e deixar o TanStack Query refetchar mantem uma fonte de
+ * verdade so (a API REST) e evita ter que serializar tarefa em dois lugares.
+ *
+ * Nao invalida o detalhe da tarefa aberta de proposito: refetchar embaixo de
+ * quem esta digitando sobrescreveria o texto em edicao.
+ */
+export function useSincronizacaoDoTime(teamId: string) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!teamId) return;
+
+    return conectaAoCanal(teamId, (evento) => {
+      if (evento.tipo === "tarefas_mudaram") {
+        void queryClient.invalidateQueries({ queryKey: chaveDoBoard(teamId) });
+        void queryClient.invalidateQueries({ queryKey: CHAVE_MINHAS });
+      }
+    });
+  }, [teamId, queryClient]);
 }

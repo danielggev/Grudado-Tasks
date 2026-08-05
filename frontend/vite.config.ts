@@ -24,6 +24,14 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY_TARGET ?? "http://localhost:8000",
         changeOrigin: true,
       },
+      // O canal de eventos precisa de `ws: true` para o proxy fazer o upgrade
+      // do handshake em vez de tratar como HTTP comum. Mesma origem do app,
+      // entao o cookie de sessao viaja junto -- e o que autentica a conexao.
+      "/ws": {
+        target: process.env.VITE_API_PROXY_TARGET ?? "http://localhost:8000",
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   test: {
