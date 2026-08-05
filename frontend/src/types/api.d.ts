@@ -129,6 +129,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tarefas/panorama": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Panorama
+         * @description Tarefas de todos os times visiveis, para a visao geral por time.
+         */
+        get: operations["panorama"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tarefas/{task_id}": {
         parameters: {
             query?: never;
@@ -214,7 +234,11 @@ export interface paths {
         get: operations["obter_time"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Excluir Time
+         * @description Remove o time com tarefas e historico. Restrito a administradores.
+         */
+        delete: operations["excluir_time"];
         options?: never;
         head?: never;
         /** Atualizar Time */
@@ -582,6 +606,8 @@ export interface components {
             slug: string;
             /** Total De Membros */
             total_de_membros: number;
+            /** Total De Tarefas */
+            total_de_tarefas: number;
         };
         /** TimeResumo */
         TimeResumo: {
@@ -600,6 +626,8 @@ export interface components {
             slug: string;
             /** Total De Membros */
             total_de_membros: number;
+            /** Total De Tarefas */
+            total_de_tarefas: number;
         };
         /**
          * UsuarioAutenticado
@@ -842,6 +870,37 @@ export interface operations {
         };
     };
     minhas_tarefas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaResumo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    panorama: {
         parameters: {
             query?: never;
             header?: never;
@@ -1132,6 +1191,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TimeDetalhe"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    excluir_time: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

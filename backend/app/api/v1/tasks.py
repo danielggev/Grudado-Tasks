@@ -31,6 +31,13 @@ async def minhas_tarefas(session: SessaoDep, ctx: ContextoDep) -> list[TarefaRes
     return [_resumo(t, filhas=t.subtasks) for t in tarefas]
 
 
+@router.get("/panorama", name="panorama")
+async def panorama(session: SessaoDep, ctx: ContextoDep) -> list[TarefaResumo]:
+    """Tarefas de todos os times visiveis, para a visao geral por time."""
+    tarefas = await task_service.panorama(session, ctx)
+    return [_resumo(t, filhas=t.subtasks) for t in tarefas]
+
+
 @router.get("/board", name="board_do_time")
 async def board_do_time(
     session: SessaoDep, ctx: ContextoDep, team_id: Annotated[UUID, Query()]

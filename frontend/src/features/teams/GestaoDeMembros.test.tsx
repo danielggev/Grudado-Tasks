@@ -26,6 +26,7 @@ function time(membros: MembroDoTime[], archived_at: string | null = null): TimeD
     description: null,
     archived_at,
     total_de_membros: membros.length,
+    total_de_tarefas: 0,
     membros,
   };
 }

@@ -12,6 +12,7 @@ import {
   minhasTarefas,
   moveTarefa,
   obtemTarefa,
+  panorama,
   type MoverTarefa,
   type TarefaAtualizar,
   type TarefaCriar,
@@ -35,6 +36,12 @@ export function useMinhasTarefas() {
   return useQuery({ queryKey: CHAVE_MINHAS, queryFn: minhasTarefas });
 }
 
+export const CHAVE_PANORAMA = [...CHAVE_TAREFAS, "panorama"] as const;
+
+export function usePanorama() {
+  return useQuery({ queryKey: CHAVE_PANORAMA, queryFn: panorama });
+}
+
 export function useTarefa(taskId: string) {
   return useQuery({
     queryKey: chaveDaTarefa(taskId),
@@ -52,6 +59,9 @@ export function useAtividade(taskId: string) {
 function invalidaTudoDoTime(queryClient: QueryClient, teamId: string) {
   void queryClient.invalidateQueries({ queryKey: chaveDoBoard(teamId) });
   void queryClient.invalidateQueries({ queryKey: CHAVE_MINHAS });
+  // A visao geral por time mostra as mesmas tarefas: sem isto, criar uma tarefa
+  // no board deixaria a tela de Times mostrando o estado anterior.
+  void queryClient.invalidateQueries({ queryKey: CHAVE_PANORAMA });
 }
 
 export function useCriarTarefa(teamId: string) {
@@ -124,6 +134,7 @@ export function useMoverTarefa(teamId: string) {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: chave });
       void queryClient.invalidateQueries({ queryKey: CHAVE_MINHAS });
+      void queryClient.invalidateQueries({ queryKey: CHAVE_PANORAMA });
     },
   });
 }

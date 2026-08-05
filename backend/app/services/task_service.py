@@ -67,6 +67,25 @@ async def obtem_tarefa(
     return tarefa
 
 
+async def panorama(session: AsyncSession, ctx: ContextoDeAcesso) -> list[Task]:
+    """Tarefas de topo de todos os times visiveis, para a visao geral.
+
+    Uma consulta so em vez de uma por time: a tela mostra os times lado a lado,
+    e buscar cada coluna separadamente seria N+1 na tela inicial.
+
+    Traz tambem as concluidas -- a coluna do time mostra o que rolou, e esconder
+    o concluido daria a impressao de time parado.
+    """
+    stmt = _com_relacionamentos(select(Task)).where(Task.parent_id.is_(None))
+
+    if not ctx.e_admin:
+        stmt = stmt.where(Task.team_id.in_(ctx.times))
+
+    return list(
+        (await session.execute(stmt.order_by(Task.status, Task.position))).scalars().all()
+    )
+
+
 async def minhas_tarefas(session: AsyncSession, ctx: ContextoDeAcesso) -> list[Task]:
     """Tarefas em que a pessoa e responsavel, mais as dos times dela sem
     responsavel designado -- que sao dela tanto quanto de qualquer colega."""

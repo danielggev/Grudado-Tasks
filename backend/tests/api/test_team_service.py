@@ -13,8 +13,10 @@ restricoes que so o banco garante.
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models import Task
 from app.domain.enums import OrgRole, TeamRole
 from app.domain.errors import AcessoNegado, RecursoNaoEncontrado
 from app.domain.team_rules import MembroJaNoTime, TimeArquivado, UltimoLeadDoTime
@@ -65,7 +67,7 @@ class TestVisibilidade:
 
         visiveis = await team_service.lista_times(session, await contexto_de(session, pessoa))
 
-        assert [time.name for time, _ in visiveis] == ["Design"]
+        assert [time.name for time, _, _ in visiveis] == ["Design"]
 
     async def test_admin_ve_todos(self, session: AsyncSession) -> None:
         admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
@@ -75,7 +77,31 @@ class TestVisibilidade:
 
         visiveis = await team_service.lista_times(session, await contexto_de(session, admin))
 
-        assert [time.name for time, _ in visiveis] == ["Design", "Producao"]
+        assert [time.name for time, _, _ in visiveis] == ["Design", "Producao"]
+
+    async def test_lista_traz_a_contagem_de_tarefas(self, session: AsyncSession) -> None:
+        """As duas contagens saem na mesma consulta e nao podem se contaminar:
+        juntar membros e tarefas por `join` inflaria as duas."""
+        from app.schemas.task import TarefaCriar
+        from app.services import task_service
+
+        lead = await cria_usuario(session, nome="Lead")
+        outra = await cria_usuario(session, nome="Outra")
+        time = await cria_time_com_lead(session, nome="Design", lead=lead)
+        ctx = await contexto_de(session, lead)
+        await team_service.adiciona_membro(
+            session, ctx, time.id, AdicionarMembro(user_id=outra.id)
+        )
+        for titulo in ("Arte", "Banner", "Post"):
+            await task_service.cria_tarefa(
+                session, ctx, TarefaCriar(title=titulo, team_id=time.id)
+            )
+
+        [(_, membros, tarefas)] = await team_service.lista_times(
+            session, await contexto_de(session, lead)
+        )
+
+        assert (membros, tarefas) == (2, 3)
 
     async def test_lista_traz_a_contagem_de_membros(self, session: AsyncSession) -> None:
         lead = await cria_usuario(session, nome="Lead")
@@ -246,6 +272,47 @@ class TestArquivamento:
 
         assert atualizado.name == "Design e Criacao"
         assert atualizado.archived_at is None
+
+
+class TestExclusao:
+    async def test_admin_exclui_e_leva_as_tarefas_junto(self, session: AsyncSession) -> None:
+        from app.schemas.task import TarefaCriar
+        from app.services import task_service
+
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+        ctx = await contexto_de(session, admin)
+        time = await team_service.cria_time(session, ctx, TimeCriar(name="Design"))
+        ctx = await contexto_de(session, admin)
+        tarefa = await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Arte", team_id=time.id)
+        )
+
+        await team_service.exclui_time(session, ctx, time.id)
+
+        with pytest.raises(RecursoNaoEncontrado):
+            await team_service.obtem_time(session, ctx, time.id)
+        # A FK cascateia: a tarefa nao sobrevive ao time.
+        assert (
+            await session.execute(select(Task).where(Task.id == tarefa.id))
+        ).scalar_one_or_none() is None
+
+    async def test_lead_nao_exclui_o_proprio_time(self, session: AsyncSession) -> None:
+        """Lead arquiva, mas nao destroi: arquivar da para desfazer, excluir nao."""
+        lead = await cria_usuario(session, nome="Lead")
+        time = await cria_time_com_lead(session, nome="Design", lead=lead)
+
+        with pytest.raises(AcessoNegado):
+            await team_service.exclui_time(
+                session, await contexto_de(session, lead), time.id
+            )
+
+    async def test_admin_nao_exclui_time_inexistente(self, session: AsyncSession) -> None:
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+
+        with pytest.raises(RecursoNaoEncontrado):
+            await team_service.exclui_time(
+                session, await contexto_de(session, admin), uuid4()
+            )
 
 
 class TestAtualizacao:

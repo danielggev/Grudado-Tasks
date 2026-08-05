@@ -7,6 +7,7 @@ import {
   arquivaTime,
   atualizaTime,
   criaTime,
+  excluiTime,
   listaTimes,
   obtemTime,
   removeMembro,
@@ -111,5 +112,23 @@ export function useRemoverMembro(teamId: string) {
   return useMutation({
     mutationFn: (userId: string) => removeMembro(teamId, userId),
     onSuccess: () => invalidar(teamId),
+  });
+}
+
+/**
+ * Exclusao definitiva do time. Leva tarefas e historico junto, sem volta --
+ * a confirmacao na interface precisa deixar isso explicito.
+ */
+export function useExcluirTime() {
+  const queryClient = useQueryClient();
+  const invalidar = useInvalidacao();
+  return useMutation({
+    mutationFn: (teamId: string) => excluiTime(teamId),
+    onSuccess: () => {
+      invalidar();
+      // As tarefas do time sumiram junto: limpar o cache de tarefas evita que
+      // a visao geral continue desenhando uma coluna que nao existe mais.
+      void queryClient.invalidateQueries({ queryKey: ["tarefas"] });
+    },
   });
 }

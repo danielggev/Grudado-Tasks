@@ -56,6 +56,16 @@ def pode_gerenciar_membros(ctx: ContextoDeAcesso, team_id: UUID) -> bool:
     return ctx.e_admin or ctx.e_lead_de(team_id)
 
 
+def pode_excluir_time(ctx: ContextoDeAcesso) -> bool:
+    """Excluir e mais restrito que arquivar, e de proposito.
+
+    Arquivar preserva tudo e da para desfazer -- por isso e do lead. Excluir
+    leva junto as tarefas e o historico do time, sem volta, entao fica so com o
+    admin da organizacao.
+    """
+    return ctx.e_admin
+
+
 # --- Tarefas -------------------------------------------------------------
 
 

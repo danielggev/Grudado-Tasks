@@ -347,6 +347,51 @@ class TestPermissoes:
             )
 
 
+class TestPanorama:
+    async def test_traz_tarefas_de_todos_os_times_do_usuario(
+        self, session: AsyncSession
+    ) -> None:
+        time, lead, _, ctx = await cenario(session)
+        outro = await cria_time_com_lead(session, nome="Producao", lead=lead)
+        ctx = await contexto_de(session, lead)
+
+        await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Arte do post", team_id=time.id)
+        )
+        await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Corte do vinil", team_id=outro.id)
+        )
+
+        panorama = await task_service.panorama(session, await contexto_de(session, lead))
+
+        assert {t.title for t in panorama} == {"Arte do post", "Corte do vinil"}
+
+    async def test_nao_vaza_tarefa_de_time_alheio(self, session: AsyncSession) -> None:
+        time, _, _, ctx = await cenario(session)
+        await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Secreta", team_id=time.id)
+        )
+        estranho = await cria_usuario(session, nome="Estranho")
+
+        assert (
+            await task_service.panorama(session, await contexto_de(session, estranho))
+        ) == []
+
+    async def test_subtarefa_nao_entra_no_panorama(self, session: AsyncSession) -> None:
+        """Mesma regra do board: subtarefa vive dentro da mae, nao solta."""
+        time, lead, _, ctx = await cenario(session)
+        mae = await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Campanha", team_id=time.id)
+        )
+        await task_service.cria_tarefa(
+            session, ctx, TarefaCriar(title="Arte", team_id=time.id, parent_id=mae.id)
+        )
+
+        panorama = await task_service.panorama(session, await contexto_de(session, lead))
+
+        assert [t.title for t in panorama] == ["Campanha"]
+
+
 class TestMinhasTarefas:
     async def test_traz_as_designadas_e_as_do_time_sem_dono(
         self, session: AsyncSession

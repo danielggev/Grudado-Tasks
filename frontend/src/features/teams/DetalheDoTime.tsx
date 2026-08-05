@@ -6,6 +6,7 @@ import { Botao } from "../../components/ui/Botao";
 import { Confirmacao } from "../../components/ui/Confirmacao";
 import { Esqueleto } from "../../components/ui/Esqueleto";
 import { BoardDoTime } from "../tasks/BoardDoTime";
+import { DialogoExcluirTime } from "./DialogoExcluirTime";
 import { GestaoDeMembros } from "./GestaoDeMembros";
 import { useArquivarTime, useAtualizarTime, usePermissoes, useTime } from "./hooks";
 
@@ -93,11 +94,13 @@ function Cabecalho({
 }) {
   const [editando, setEditando] = useState(false);
   const [confirmandoArquivar, setConfirmandoArquivar] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [name, setName] = useState(time.name);
   const [description, setDescription] = useState(time.description ?? "");
 
   const atualizar = useAtualizarTime(time.id);
   const arquivar = useArquivarTime(time.id);
+  const { ehAdmin } = usePermissoes();
   const arquivado = time.archived_at !== null;
 
   // Se o time for atualizado por outra pessoa enquanto esta tela esta aberta,
@@ -123,10 +126,10 @@ function Cabecalho({
           </div>
 
           {podeGerenciar && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {!arquivado && <Botao onClick={() => setEditando(true)}>Editar</Botao>}
               <Botao
-                variante={arquivado ? "secundario" : "perigo"}
+                variante="secundario"
                 disabled={arquivar.isPending}
                 onClick={() =>
                   arquivado ? arquivar.mutate(false) : setConfirmandoArquivar(true)
@@ -134,6 +137,13 @@ function Cabecalho({
               >
                 {arquivado ? "Reativar" : "Arquivar"}
               </Botao>
+              {/* Excluir e mais restrito que arquivar: arquivar preserva tudo
+                  e da para desfazer, excluir destroi tarefas e historico. */}
+              {ehAdmin && (
+                <Botao variante="perigo" onClick={() => setExcluindo(true)}>
+                  Excluir
+                </Botao>
+              )}
             </div>
           )}
         </div>
@@ -148,6 +158,12 @@ function Cabecalho({
             arquivar.mutate(true, { onSuccess: () => setConfirmandoArquivar(false) })
           }
           aoCancelar={() => setConfirmandoArquivar(false)}
+        />
+
+        <DialogoExcluirTime
+          time={time}
+          aberto={excluindo}
+          aoFechar={() => setExcluindo(false)}
         />
       </>
     );

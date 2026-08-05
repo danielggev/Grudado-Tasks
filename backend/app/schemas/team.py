@@ -42,6 +42,9 @@ class TimeResumo(BaseModel):
     archived_at: datetime | None
     total_de_membros: int
 
+    # Usado no aviso de exclusao: numero exato do que se perde.
+    total_de_tarefas: int
+
 
 class TimeDetalhe(TimeResumo):
     membros: list[MembroDoTime]

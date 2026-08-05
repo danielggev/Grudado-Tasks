@@ -17,6 +17,11 @@ export function boardDoTime(teamId: string): Promise<TarefaResumo[]> {
   return apiFetch<TarefaResumo[]>(`${BASE}/board?team_id=${teamId}`);
 }
 
+/** Tarefas de todos os times visiveis, numa requisicao so. */
+export function panorama(): Promise<TarefaResumo[]> {
+  return apiFetch<TarefaResumo[]>(`${BASE}/panorama`);
+}
+
 export function minhasTarefas(): Promise<TarefaResumo[]> {
   return apiFetch<TarefaResumo[]>(`${BASE}/minhas`);
 }

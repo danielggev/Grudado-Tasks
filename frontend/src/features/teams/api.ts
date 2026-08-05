@@ -59,3 +59,8 @@ export function alteraPapel(
 export function removeMembro(teamId: string, userId: string): Promise<void> {
   return apiFetch<void>(`${BASE}/${teamId}/membros/${userId}`, { method: "DELETE" });
 }
+
+/** Destrutivo e sem volta: leva tarefas e historico junto. Só admin. */
+export function excluiTime(teamId: string): Promise<void> {
+  return apiFetch<void>(`${BASE}/${teamId}`, { method: "DELETE" });
+}

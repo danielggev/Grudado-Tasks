@@ -5,13 +5,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Team, TeamMember, User
+from app.db.models import Task, Team, TeamMember, User
 from app.domain.enums import TeamRole
 from app.domain.errors import RecursoNaoEncontrado
 from app.domain.permissions import (
     ContextoDeAcesso,
     exigir,
     pode_criar_time,
+    pode_excluir_time,
     pode_gerenciar_membros,
     pode_gerenciar_time,
     pode_ver_time,
@@ -47,14 +48,22 @@ class UsuarioNaoEncontrado(RecursoNaoEncontrado):
 
 async def lista_times(
     session: AsyncSession, ctx: ContextoDeAcesso, *, incluir_arquivados: bool = False
-) -> list[tuple[Team, int]]:
-    """Times visiveis ao usuario, com a contagem de membros.
+) -> list[tuple[Team, int, int]]:
+    """Times visiveis ao usuario, com contagem de membros e de tarefas.
 
-    A contagem sai na mesma consulta: buscar os times e depois contar membros de
-    cada um seria N+1 logo na primeira tela do app.
+    As contagens saem na mesma consulta: buscar os times e depois contar cada um
+    seria N+1 logo na primeira tela do app.
+
+    A de tarefas usa subconsulta correlacionada em vez de outro `join`: juntar
+    duas tabelas filhas na mesma consulta multiplicaria as linhas e inflaria as
+    duas contagens.
     """
+    total_de_tarefas = (
+        select(func.count(Task.id)).where(Task.team_id == Team.id).scalar_subquery()
+    )
+
     stmt = (
-        select(Team, func.count(TeamMember.user_id))
+        select(Team, func.count(TeamMember.user_id), total_de_tarefas)
         .outerjoin(TeamMember, TeamMember.team_id == Team.id)
         .group_by(Team.id)
         .order_by(Team.name)
@@ -64,7 +73,10 @@ async def lista_times(
     if not incluir_arquivados:
         stmt = stmt.where(Team.archived_at.is_(None))
 
-    return [(time, total) for time, total in (await session.execute(stmt)).all()]
+    return [
+        (time, membros, tarefas)
+        for time, membros, tarefas in (await session.execute(stmt)).all()
+    ]
 
 
 async def obtem_time(
@@ -74,6 +86,18 @@ async def obtem_time(
     if not pode_ver_time(ctx, time.id):
         raise TimeNaoEncontrado()
     return time, len(time.members)
+
+
+async def conta_tarefas(session: AsyncSession, team_id: UUID) -> int:
+    """Contagem avulsa para as respostas de detalhe.
+
+    Consulta separada em vez de carregar as tarefas junto do time: a tela de
+    detalhe ja busca o board pelo endpoint proprio, e trazer tudo duas vezes
+    seria desperdicio. Um COUNT coberto por indice e barato.
+    """
+    return (
+        await session.execute(select(func.count(Task.id)).where(Task.team_id == team_id))
+    ).scalar_one()
 
 
 # --- Escrita -------------------------------------------------------------
@@ -118,6 +142,26 @@ async def atualiza_time(
 
     await session.flush()
     return time
+
+
+async def exclui_time(session: AsyncSession, ctx: ContextoDeAcesso, team_id: UUID) -> None:
+    """Remove o time e tudo que pende dele.
+
+    As FKs cascateiam: tarefas, subtarefas, responsaveis, vinculos de membro e
+    o log de atividade do time somem junto. Nao ha volta -- por isso e restrito
+    ao admin, e por isso arquivar continua sendo o caminho recomendado para um
+    time que so parou de operar.
+    """
+    time = await _carrega_com_membros(session, team_id)
+    if not pode_ver_time(ctx, time.id):
+        raise TimeNaoEncontrado()
+    exigir(
+        pode_excluir_time(ctx),
+        "Apenas administradores podem excluir times. Considere arquivar.",
+    )
+
+    await session.delete(time)
+    await session.flush()
 
 
 async def arquiva_time(
