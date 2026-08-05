@@ -25,7 +25,7 @@ function tarefa(extra: Partial<TarefaResumo> = {}): TarefaResumo {
 describe("CartaoDeTarefa", () => {
   it("marca tarefa sem responsavel como tarefa do time", () => {
     render(<CartaoDeTarefa tarefa={tarefa()} aoAbrir={() => {}} />);
-    expect(screen.getByText("Tarefa do time")).toBeInTheDocument();
+    expect(screen.getByText("Do time")).toBeInTheDocument();
   });
 
   it("mostra avatares no lugar do rotulo quando ha responsaveis", () => {
@@ -40,7 +40,7 @@ describe("CartaoDeTarefa", () => {
         aoAbrir={() => {}}
       />,
     );
-    expect(screen.queryByText("Tarefa do time")).not.toBeInTheDocument();
+    expect(screen.queryByText("Do time")).not.toBeInTheDocument();
     expect(screen.getByTitle("Ana")).toBeInTheDocument();
   });
 

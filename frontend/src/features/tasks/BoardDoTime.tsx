@@ -9,6 +9,11 @@ import { ListaDoTime } from "./ListaDoTime";
 
 type Visao = "board" | "lista";
 
+const VISOES: [Visao, string][] = [
+  ["board", "Board"],
+  ["lista", "Lista"],
+];
+
 export function BoardDoTime({ teamId }: { teamId: string }) {
   // Board e lista compartilham a query, entao uma assinatura so cobre as duas.
   useSincronizacaoDoTime(teamId);
@@ -17,33 +22,29 @@ export function BoardDoTime({ teamId }: { teamId: string }) {
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
   const [criando, setCriando] = useState<{ parentId?: string } | null>(null);
 
-  const abaAtiva = "bg-superficie text-texto shadow-sm";
-  const abaInativa = "text-texto-suave hover:text-texto";
-
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-texto">Tarefas</h2>
+        <h2 className="text-xs font-black tracking-wide text-texto-suave uppercase">
+          Tarefas
+        </h2>
 
         <div
           role="tablist"
           aria-label="Visualização das tarefas"
-          className="flex rounded-lg bg-superficie-2 p-0.5"
+          className="flex rounded-full bg-superficie-2 p-1"
         >
-          {(
-            [
-              ["board", "Board"],
-              ["lista", "Lista"],
-            ] as const
-          ).map(([valor, rotulo]) => (
+          {VISOES.map(([valor, rotulo]) => (
             <button
               key={valor}
               type="button"
               role="tab"
               aria-selected={visao === valor}
               onClick={() => setVisao(valor)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                visao === valor ? abaAtiva : abaInativa
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-all duration-200 ${
+                visao === valor
+                  ? "bg-superficie text-texto shadow-suave"
+                  : "text-texto-suave hover:text-texto"
               }`}
             >
               {rotulo}

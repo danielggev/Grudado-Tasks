@@ -6,6 +6,10 @@ import { Botao } from "../../components/ui/Botao";
 import { Dialogo } from "../../components/ui/Dialogo";
 import { useCriarTime } from "./hooks";
 
+const CAMPO =
+  "w-full rounded-xl border border-borda bg-superficie px-3 py-2 text-sm outline-none transition focus:border-azul-claro";
+const ROTULO = "text-xs font-black tracking-wide text-texto-suave uppercase";
+
 export function DialogoNovoTime({
   aberto,
   aoFechar,
@@ -36,8 +40,8 @@ export function DialogoNovoTime({
   return (
     <Dialogo aberto={aberto} titulo="Novo time" aoFechar={aoFechar}>
       <form onSubmit={enviar} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Nome</span>
+        <label className="flex flex-col gap-1.5">
+          <span className={ROTULO}>Nome</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -46,26 +50,32 @@ export function DialogoNovoTime({
             maxLength={120}
             autoFocus
             placeholder="Design"
-            className="rounded-lg border border-borda bg-superficie px-3 py-2 outline-none focus:border-marca"
+            className={`${CAMPO} font-semibold`}
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Descricao</span>
+        <label className="flex flex-col gap-1.5">
+          <span className={ROTULO}>Descrição</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={2000}
             rows={3}
             placeholder="Opcional"
-            className="resize-y rounded-lg border border-borda bg-superficie px-3 py-2 outline-none focus:border-marca"
+            className={`${CAMPO} resize-y`}
           />
         </label>
+
+        <p className="text-[11px] text-texto-suave">
+          Você entra como lead do time e pode adicionar as pessoas em seguida.
+        </p>
 
         <Aviso erro={criar.error} />
 
         <div className="flex justify-end gap-2">
-          <Botao onClick={aoFechar}>Cancelar</Botao>
+          <Botao variante="fantasma" onClick={aoFechar}>
+            Cancelar
+          </Botao>
           <Botao type="submit" variante="primario" disabled={criar.isPending}>
             {criar.isPending ? "Criando..." : "Criar time"}
           </Botao>

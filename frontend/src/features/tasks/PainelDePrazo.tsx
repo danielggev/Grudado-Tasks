@@ -27,29 +27,33 @@ export function PainelDePrazo({
   }
 
   return (
-    <Dialogo aberto titulo="Defina o prazo para comecar" aoFechar={onCancelar}>
+    <Dialogo aberto titulo="Defina o prazo para começar" aoFechar={onCancelar}>
       <form onSubmit={enviar} className="flex flex-col gap-4">
-        <p className="text-sm text-texto-suave">
-          Esta tarefa foi criada sem prazo. Para mover para esta coluna, informe
+        <p className="text-sm leading-relaxed text-texto-suave">
+          Esta tarefa foi criada sem prazo. Para movê-la desta coluna, informe
           quando ela deve ficar pronta.
         </p>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Prazo</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-black tracking-wide text-texto-suave uppercase">
+            Prazo
+          </span>
           <input
             type="date"
             value={data}
             onChange={(e) => setData(e.target.value)}
             required
             autoFocus
-            className="rounded-lg border border-borda bg-superficie px-3 py-2 outline-none focus:border-marca"
+            className="w-full rounded-xl border border-borda bg-superficie px-3 py-2 text-sm outline-none transition focus:border-azul-claro"
           />
         </label>
 
         <Aviso erro={erro} />
 
         <div className="flex justify-end gap-2">
-          <Botao onClick={onCancelar}>Cancelar</Botao>
+          <Botao variante="fantasma" onClick={onCancelar}>
+            Cancelar
+          </Botao>
           <Botao type="submit" variante="primario" disabled={!data}>
             Confirmar e mover
           </Botao>

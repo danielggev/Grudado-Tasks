@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 
+import { AlternadorDeTema } from "../components/ui/AlternadorDeTema";
+import { Marca } from "../components/ui/Marca";
 import { useEncerrarSessao, useUsuarioAtual } from "../features/auth/hooks";
 
 const ITENS = [
@@ -13,58 +15,88 @@ export function Layout() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-borda bg-superficie px-6 py-3">
-        <span className="font-semibold tracking-tight">Grudado Tasks</span>
+      <header className="sticky top-0 z-20 border-b border-borda bg-superficie/85 backdrop-blur-md">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-2.5">
+          <Marca />
 
-        <nav className="flex gap-1">
-          {ITENS.map((item) => (
-            <NavLink
-              key={item.para}
-              to={item.para}
-              className={({ isActive }) =>
-                `rounded-lg px-3 py-1.5 text-sm transition ${
-                  isActive
-                    ? "bg-marca-suave font-medium text-marca"
-                    : "text-texto-suave hover:bg-superficie-2"
-                }`
-              }
-            >
-              {item.rotulo}
-            </NavLink>
-          ))}
-        </nav>
+          <nav className="flex gap-1">
+            {ITENS.map((item) => (
+              <NavLink
+                key={item.para}
+                to={item.para}
+                className={({ isActive }) =>
+                  `rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-rosa/10 text-rosa"
+                      : "text-texto-suave hover:bg-superficie-2 hover:text-texto"
+                  }`
+                }
+              >
+                {item.rotulo}
+              </NavLink>
+            ))}
+          </nav>
 
-        <div className="ml-auto flex items-center gap-3">
-          {usuario && (
-            <span className="text-sm text-texto-suave" title={usuario.email}>
-              {usuario.name}
-              {usuario.org_role === "admin" && (
-                <span className="ml-2 rounded bg-superficie-2 px-1.5 py-0.5 text-xs">
-                  admin
+          <div className="ml-auto flex items-center gap-2">
+            <AlternadorDeTema />
+
+            {usuario && (
+              <span className="flex items-center gap-2" title={usuario.email}>
+                <Avatar nome={usuario.name} />
+                <span className="hidden text-xs font-semibold text-texto sm:inline">
+                  {usuario.name}
                 </span>
-              )}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              encerrar.mutate(undefined, {
-                onSuccess: () => {
-                  window.location.href = "/entrar";
-                },
-              });
-            }}
-            disabled={encerrar.isPending}
-            className="rounded-lg border border-borda px-3 py-1.5 text-sm transition hover:bg-superficie-2 disabled:opacity-50"
-          >
-            Sair
-          </button>
+                {usuario.org_role === "admin" && (
+                  <span className="rounded-full bg-amarelo px-2 py-0.5 text-[10px] font-black tracking-wide text-azul-escuro uppercase">
+                    admin
+                  </span>
+                )}
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                encerrar.mutate(undefined, {
+                  onSuccess: () => {
+                    window.location.href = "/entrar";
+                  },
+                });
+              }}
+              disabled={encerrar.isPending}
+              className="rounded-full px-3 py-1.5 text-xs font-semibold text-texto-suave transition hover:bg-superficie-2 hover:text-texto disabled:opacity-50"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-5 py-6">
         <Outlet />
       </main>
     </div>
+  );
+}
+
+/** Iniciais em circulo, com a cor derivada do nome — mesma pessoa, mesma cor. */
+export function Avatar({ nome, tamanho = "sm" }: { nome: string; tamanho?: "sm" | "xs" }) {
+  const PALETA = [
+    "bg-rosa/15 text-rosa",
+    "bg-azul-claro/15 text-azul-claro",
+    "bg-laranja/15 text-laranja",
+    "bg-verde/25 text-azul-escuro",
+  ];
+  const indice = [...nome].reduce((soma, c) => soma + c.charCodeAt(0), 0) % PALETA.length;
+
+  return (
+    <span
+      title={nome}
+      className={`flex shrink-0 items-center justify-center rounded-full font-black ${PALETA[indice]} ${
+        tamanho === "sm" ? "h-6 w-6 text-[10px]" : "h-5 w-5 text-[9px]"
+      }`}
+    >
+      {nome.charAt(0).toUpperCase()}
+    </span>
   );
 }

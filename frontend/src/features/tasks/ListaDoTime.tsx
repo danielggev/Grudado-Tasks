@@ -1,18 +1,15 @@
 import { useMemo, useState } from "react";
 
 import { Aviso } from "../../components/ui/Aviso";
+import { EstadoVazio } from "../../components/ui/EstadoVazio";
+import { EsqueletoDeLinha } from "../../components/ui/Esqueleto";
 import { useTime } from "../teams/hooks";
 import type { TaskPriority, TaskStatus } from "./api";
 import { useBoard } from "./hooks";
 import { LinhaDeTarefa } from "./LinhaDeTarefa";
-import { ORDEM_PRIORIDADE, ROTULO_PRIORIDADE } from "./prioridade";
+import { ORDEM_PRIORIDADE, ROTULO_PRIORIDADE, ROTULO_STATUS } from "./prioridade";
 
-const STATUS: { valor: TaskStatus; rotulo: string }[] = [
-  { valor: "a_fazer", rotulo: "A fazer" },
-  { valor: "em_andamento", rotulo: "Em andamento" },
-  { valor: "bloqueado", rotulo: "Bloqueado" },
-  { valor: "concluido", rotulo: "Concluído" },
-];
+const STATUS: TaskStatus[] = ["a_fazer", "em_andamento", "bloqueado", "concluido"];
 
 /**
  * Mesma fonte de dados do board (useBoard) -- filtros sao recorte no cliente.
@@ -30,40 +27,85 @@ export function ListaDoTime({
   const { data: tarefas, isPending, error } = useBoard(teamId);
   const { data: time } = useTime(teamId);
 
+  const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [prioridade, setPrioridade] = useState<TaskPriority | "">("");
   const [responsavel, setResponsavel] = useState<string | "">("");
 
   const filtradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
     return (tarefas ?? []).filter((t) => {
+      if (termo && !t.title.toLowerCase().includes(termo)) return false;
       if (status && t.status !== status) return false;
       if (prioridade && t.priority !== prioridade) return false;
       if (responsavel === "time" && !t.e_do_time) return false;
-      if (responsavel && responsavel !== "time" && !t.responsaveis.some((r) => r.id === responsavel))
+      if (
+        responsavel &&
+        responsavel !== "time" &&
+        !t.responsaveis.some((r) => r.id === responsavel)
+      )
         return false;
       return true;
     });
-  }, [tarefas, status, prioridade, responsavel]);
+  }, [tarefas, busca, status, prioridade, responsavel]);
 
-  if (isPending) return <p className="text-sm text-texto-suave">Carregando tarefas...</p>;
+  const temFiltro = Boolean(busca || status || prioridade || responsavel);
+
+  function limpa() {
+    setBusca("");
+    setStatus("");
+    setPrioridade("");
+    setResponsavel("");
+  }
+
+  if (isPending) {
+    return (
+      <div className="divide-y divide-borda rounded-card border border-borda bg-superficie">
+        {Array.from({ length: 5 }, (_, i) => (
+          <EsqueletoDeLinha key={i} />
+        ))}
+      </div>
+    );
+  }
   if (error) return <Aviso erro={error} />;
 
-  const estiloSelect =
-    "rounded-lg border border-borda bg-superficie px-2 py-1.5 text-sm outline-none focus:border-marca";
+  const seletor =
+    "rounded-full border border-borda bg-superficie px-3 py-1.5 text-xs font-semibold outline-none transition focus:border-azul-claro";
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
+        <label className="relative">
+          <span className="sr-only">Buscar tarefa</span>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            className="absolute top-1/2 left-3 -translate-y-1/2 text-texto-suave"
+          >
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2.5" />
+            <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar..."
+            className={`${seletor} w-44 pl-8`}
+          />
+        </label>
+
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
           aria-label="Filtrar por status"
-          className={estiloSelect}
+          className={seletor}
         >
           <option value="">Todos os status</option>
           {STATUS.map((s) => (
-            <option key={s.valor} value={s.valor}>
-              {s.rotulo}
+            <option key={s} value={s}>
+              {ROTULO_STATUS[s]}
             </option>
           ))}
         </select>
@@ -72,7 +114,7 @@ export function ListaDoTime({
           value={prioridade}
           onChange={(e) => setPrioridade(e.target.value as TaskPriority | "")}
           aria-label="Filtrar por prioridade"
-          className={estiloSelect}
+          className={seletor}
         >
           <option value="">Todas as prioridades</option>
           {ORDEM_PRIORIDADE.map((p) => (
@@ -86,7 +128,7 @@ export function ListaDoTime({
           value={responsavel}
           onChange={(e) => setResponsavel(e.target.value)}
           aria-label="Filtrar por responsável"
-          className={estiloSelect}
+          className={seletor}
         >
           <option value="">Todos os responsáveis</option>
           <option value="time">Tarefas do time (sem dono)</option>
@@ -97,13 +139,23 @@ export function ListaDoTime({
           ))}
         </select>
 
-        <span className="ml-auto text-xs text-texto-suave">
+        {temFiltro && (
+          <button
+            type="button"
+            onClick={limpa}
+            className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-rosa transition hover:bg-rosa/10"
+          >
+            Limpar
+          </button>
+        )}
+
+        <span className="ml-auto text-xs font-semibold text-texto-suave">
           {filtradas.length} de {(tarefas ?? []).length}
         </span>
       </div>
 
       {filtradas.length > 0 ? (
-        <div className="divide-y divide-borda rounded-xl border border-borda bg-superficie">
+        <div className="surge divide-y divide-borda overflow-hidden rounded-card border border-borda bg-superficie shadow-suave">
           {filtradas.map((tarefa) => (
             <LinhaDeTarefa
               key={tarefa.id}
@@ -113,9 +165,15 @@ export function ListaDoTime({
           ))}
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed border-borda bg-superficie p-6 text-center text-sm text-texto-suave">
-          Nenhuma tarefa com esses filtros.
-        </p>
+        <EstadoVazio
+          compacto
+          titulo={temFiltro ? "Nada com esses filtros" : "Nenhuma tarefa ainda"}
+          descricao={
+            temFiltro
+              ? "Tente afrouxar os filtros para encontrar o que procura."
+              : "Crie a primeira tarefa deste time."
+          }
+        />
       )}
     </div>
   );

@@ -1,10 +1,14 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { Avatar } from "../../app/Layout";
 import type { TarefaResumo } from "./api";
-import { COR_PRIORIDADE, ROTULO_PRIORIDADE } from "./prioridade";
+import { COR_PRIORIDADE, FAIXA_PRIORIDADE, ROTULO_PRIORIDADE } from "./prioridade";
 
-const FORMATADOR_DE_DATA = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
+const FORMATADOR_DE_DATA = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+});
 
 function formataPrazo(prazo: string | null): string | null {
   if (!prazo) return null;
@@ -13,9 +17,9 @@ function formataPrazo(prazo: string | null): string | null {
   return FORMATADOR_DE_DATA.format(new Date(`${prazo}T00:00:00Z`));
 }
 
-function estaAtrasada(prazo: string | null): boolean {
-  if (!prazo) return false;
-  return prazo < new Date().toISOString().slice(0, 10);
+function estaAtrasada(tarefa: TarefaResumo): boolean {
+  if (!tarefa.due_date || tarefa.status === "concluido") return false;
+  return tarefa.due_date < new Date().toISOString().slice(0, 10);
 }
 
 export function CartaoDeTarefa({
@@ -25,12 +29,12 @@ export function CartaoDeTarefa({
   tarefa: TarefaResumo;
   aoAbrir: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: tarefa.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: tarefa.id });
 
   const prazoFormatado = formataPrazo(tarefa.due_date);
-  const atrasada = estaAtrasada(tarefa.due_date);
+  const atrasada = estaAtrasada(tarefa);
+  const concluida = tarefa.status === "concluido";
 
   return (
     <div
@@ -42,57 +46,98 @@ export function CartaoDeTarefa({
       tabIndex={0}
       onClick={aoAbrir}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") aoAbrir();
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          aoAbrir();
+        }
       }}
-      className={`cursor-grab touch-none rounded-lg border border-borda bg-superficie p-3 text-left shadow-sm transition active:cursor-grabbing ${
-        isDragging ? "opacity-50" : "hover:border-marca/40"
+      className={`group relative cursor-grab touch-none overflow-hidden rounded-card border border-borda bg-superficie p-3 pl-4 text-left shadow-suave transition-all duration-200 active:cursor-grabbing ${
+        isDragging
+          ? "rotate-1 opacity-60 shadow-alta"
+          : "hover:-translate-y-0.5 hover:shadow-media"
       }`}
     >
-      <p className="text-sm font-medium text-texto">{tarefa.title}</p>
+      {/* Faixa de prioridade: cor da marca legivel de relance, sem roubar
+          largura do titulo. */}
+      <span
+        aria-hidden="true"
+        className={`absolute inset-y-0 left-0 w-1.5 ${FAIXA_PRIORIDADE[tarefa.priority]}`}
+      />
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <p
+        className={`text-sm leading-snug font-semibold ${
+          concluida ? "text-texto-suave line-through" : "text-texto"
+        }`}
+      >
+        {tarefa.title}
+      </p>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <span
-          className={`rounded border px-1.5 py-0.5 text-xs font-medium ${COR_PRIORIDADE[tarefa.priority]}`}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
         >
           {ROTULO_PRIORIDADE[tarefa.priority]}
         </span>
 
         {prazoFormatado && (
           <span
-            className={`rounded px-1.5 py-0.5 text-xs ${
-              atrasada
-                ? "bg-urgente/10 text-urgente"
-                : "bg-superficie-2 text-texto-suave"
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              atrasada ? "bg-rosa/15 text-rosa" : "bg-superficie-2 text-texto-suave"
             }`}
           >
+            <IconeRelogio />
             {atrasada ? "Atrasada" : prazoFormatado}
           </span>
         )}
 
         {tarefa.total_de_subtarefas > 0 && (
-          <span className="rounded bg-superficie-2 px-1.5 py-0.5 text-xs text-texto-suave">
+          <span className="flex items-center gap-1 rounded-full bg-superficie-2 px-2 py-0.5 text-[10px] font-semibold text-texto-suave">
+            <IconeLista />
             {tarefa.subtarefas_concluidas}/{tarefa.total_de_subtarefas}
           </span>
         )}
       </div>
 
-      <div className="mt-2 flex items-center gap-1">
+      <div className="mt-2.5 flex items-center">
         {tarefa.e_do_time ? (
-          <span className="text-xs text-texto-suave">Tarefa do time</span>
+          <span className="rounded-full bg-amarelo/25 px-2 py-0.5 text-[10px] font-semibold text-texto-suave">
+            Do time
+          </span>
         ) : (
           <div className="flex -space-x-1.5">
             {tarefa.responsaveis.map((pessoa) => (
               <span
                 key={pessoa.id}
-                title={pessoa.name}
-                className="flex h-5 w-5 items-center justify-center rounded-full border border-superficie bg-marca-suave text-[10px] font-medium text-marca"
+                className="rounded-full ring-2 ring-superficie"
               >
-                {pessoa.name.charAt(0).toUpperCase()}
+                <Avatar nome={pessoa.name} tamanho="xs" />
               </span>
             ))}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function IconeRelogio() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" />
+      <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconeLista() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h10"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

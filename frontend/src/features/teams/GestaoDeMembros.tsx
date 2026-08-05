@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { Avatar } from "../../app/Layout";
 import { Aviso } from "../../components/ui/Aviso";
 import { Botao } from "../../components/ui/Botao";
 import { useUsuarios } from "../usuarios/api";
@@ -29,14 +30,16 @@ export function GestaoDeMembros({
   const arquivado = time.archived_at !== null;
   const emAndamento = adicionar.isPending || alterar.isPending || remover.isPending;
 
+  const controle =
+    "rounded-full border border-borda bg-superficie px-3 py-1.5 text-xs font-semibold outline-none transition focus:border-azul-claro disabled:opacity-50";
+
   return (
-    <section className="mt-8">
-      <h2 className="text-sm font-semibold">
-        Membros{" "}
-        <span className="font-normal text-texto-suave">({time.membros.length})</span>
+    <section className="mt-10">
+      <h2 className="text-xs font-black tracking-wide text-texto-suave uppercase">
+        Membros ({time.membros.length})
       </h2>
 
-      <ul className="mt-3 divide-y divide-borda rounded-xl border border-borda bg-superficie">
+      <ul className="mt-3 divide-y divide-borda overflow-hidden rounded-card border border-borda bg-superficie shadow-suave">
         {time.membros.map((membro) => {
           // A regra do ultimo lead vive no backend; espelha-la aqui e so para
           // desabilitar o controle antes do erro, nunca como garantia.
@@ -44,8 +47,12 @@ export function GestaoDeMembros({
 
           return (
             <li key={membro.usuario.id} className="flex flex-wrap items-center gap-3 p-3">
+              <Avatar nome={membro.usuario.name} />
+
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{membro.usuario.name}</p>
+                <p className="truncate text-sm font-semibold text-texto">
+                  {membro.usuario.name}
+                </p>
                 <p className="truncate text-xs text-texto-suave">{membro.usuario.email}</p>
               </div>
 
@@ -66,7 +73,7 @@ export function GestaoDeMembros({
                         ? "Promova outro membro a lead antes de mudar este papel."
                         : undefined
                     }
-                    className="rounded-lg border border-borda bg-superficie px-2 py-1 text-sm disabled:opacity-50"
+                    className={controle}
                   >
                     <option value="lead">Lead</option>
                     <option value="member">Membro</option>
@@ -81,7 +88,13 @@ export function GestaoDeMembros({
                   </Botao>
                 </>
               ) : (
-                <span className="rounded bg-superficie-2 px-2 py-0.5 text-xs text-texto-suave">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-black tracking-wide uppercase ${
+                    membro.role === "lead"
+                      ? "bg-amarelo/30 text-azul-escuro"
+                      : "bg-superficie-2 text-texto-suave"
+                  }`}
+                >
                   {membro.role === "lead" ? "Lead" : "Membro"}
                 </span>
               )}
@@ -96,7 +109,7 @@ export function GestaoDeMembros({
             value={selecionado}
             onChange={(e) => setSelecionado(e.target.value)}
             aria-label="Pessoa a adicionar"
-            className="min-w-56 rounded-lg border border-borda bg-superficie px-3 py-1.5 text-sm"
+            className={`${controle} min-w-56`}
           >
             <option value="">Adicionar pessoa...</option>
             {disponiveis.map((usuario) => (

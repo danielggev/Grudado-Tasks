@@ -1,14 +1,8 @@
+import { Avatar } from "../../app/Layout";
 import type { TarefaResumo } from "./api";
-import { COR_PRIORIDADE, ROTULO_PRIORIDADE } from "./prioridade";
+import { COR_PRIORIDADE, COR_STATUS, ROTULO_PRIORIDADE, ROTULO_STATUS } from "./prioridade";
 
 const FORMATADOR = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
-
-const ROTULO_STATUS: Record<TarefaResumo["status"], string> = {
-  a_fazer: "A fazer",
-  em_andamento: "Em andamento",
-  bloqueado: "Bloqueado",
-  concluido: "Concluído",
-};
 
 function prazo(tarefa: TarefaResumo): { texto: string; atrasada: boolean } | null {
   if (!tarefa.due_date) return null;
@@ -35,36 +29,60 @@ export function LinhaDeTarefa({
   aoAbrir: () => void;
 }) {
   const p = prazo(tarefa);
+  const concluida = tarefa.status === "concluido";
 
   return (
     <button
       type="button"
       onClick={aoAbrir}
-      className="flex w-full flex-wrap items-center gap-2 px-3 py-2.5 text-left transition hover:bg-superficie-2"
+      className="group flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-superficie-2"
     >
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-texto">
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 shrink-0 rounded-full ${COR_STATUS[tarefa.status]}`}
+      />
+
+      <span
+        className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+          concluida ? "text-texto-suave line-through" : "text-texto"
+        }`}
+      >
         {tarefa.title}
       </span>
 
       {mostraTime && nomeDoTime && (
-        <span className="rounded bg-superficie-2 px-1.5 py-0.5 text-xs text-texto-suave">
+        <span className="rounded-full bg-superficie-2 px-2 py-0.5 text-[10px] font-semibold text-texto-suave group-hover:bg-superficie">
           {nomeDoTime}
         </span>
       )}
 
-      <span className="w-28 shrink-0 text-xs text-texto-suave">
+      {tarefa.e_do_time ? (
+        <span className="w-16 shrink-0 text-center text-[10px] font-semibold text-texto-suave">
+          Do time
+        </span>
+      ) : (
+        <span className="flex w-16 shrink-0 justify-center -space-x-1.5">
+          {tarefa.responsaveis.slice(0, 3).map((pessoa) => (
+            <span key={pessoa.id} className="rounded-full ring-2 ring-superficie">
+              <Avatar nome={pessoa.name} tamanho="xs" />
+            </span>
+          ))}
+        </span>
+      )}
+
+      <span className="hidden w-24 shrink-0 text-xs text-texto-suave sm:inline">
         {ROTULO_STATUS[tarefa.status]}
       </span>
 
       <span
-        className={`w-16 shrink-0 rounded border px-1.5 py-0.5 text-center text-xs font-medium ${COR_PRIORIDADE[tarefa.priority]}`}
+        className={`w-16 shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
       >
         {ROTULO_PRIORIDADE[tarefa.priority]}
       </span>
 
       <span
-        className={`w-20 shrink-0 text-right text-xs ${
-          p?.atrasada ? "font-medium text-urgente" : "text-texto-suave"
+        className={`w-20 shrink-0 text-right text-xs font-semibold ${
+          p?.atrasada ? "text-rosa" : "text-texto-suave"
         }`}
       >
         {p ? (p.atrasada ? "Atrasada" : p.texto) : "Sem prazo"}

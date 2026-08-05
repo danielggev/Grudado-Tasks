@@ -1,32 +1,90 @@
 @import "tailwindcss";
 
-/* Paleta contida para ferramenta interna: o rosa da marca entra como acento
-   pontual, nao como plano de fundo. A identidade completa da Grudado e feita
-   para material promocional -- aqui o que precisa se destacar e a tarefa. */
-@theme {
-  --color-superficie: #ffffff;
-  --color-superficie-2: #f6f7f9;
-  --color-borda: #e3e6ea;
-  --color-texto: #14181d;
-  --color-texto-suave: #64707d;
-  --color-marca: #e5007e;
-  --color-marca-suave: #fdf0f7;
+/* ─────────────────────────────────────────────────────────────
+   Hurme Geometric Sans 1 — fonte oficial da marca.
 
-  --color-urgente: #d92d20;
-  --color-alta: #e77c1a;
-  --color-normal: #3b7ddd;
-  --color-baixa: #79879a;
+   Tres pesos apenas (262 KB no total): Regular para corpo,
+   Semibold para interface e titulos de card, Black para os
+   titulos grandes -- que o manual chama de "Principal".
+   ───────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Hurme Geometric Sans 1";
+  src: url("/fonts/HURMEGEOMETRICSANS1.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hurme Geometric Sans 1";
+  src: url("/fonts/HURMEGEOMETRICSANS1-SEMIBOLD.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hurme Geometric Sans 1";
+  src: url("/fonts/HURMEGEOMETRICSANS1-BLACK.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-superficie: #14181d;
-    --color-superficie-2: #1b2027;
-    --color-borda: #2a313a;
-    --color-texto: #eef1f4;
-    --color-texto-suave: #9aa6b3;
-    --color-marca-suave: #33101f;
-  }
+@theme {
+  --font-sans: "Hurme Geometric Sans 1", "Nunito", "Quicksand", system-ui, sans-serif;
+
+  /* ── Paleta oficial. Nao inventar cor fora daqui. ── */
+  --color-amarelo: #f9e547;
+  --color-verde: #8edd65;
+  --color-rosa: #ef426f;
+  --color-azul-claro: #05c3de;
+  --color-laranja: #ff6a39;
+  --color-azul-escuro: #253746;
+
+  /* ── Prioridade: cada nivel ganha uma cor da marca. A escala
+        vai do quente/alarmante ao frio/calmo, que e como as
+        pessoas leem urgencia sem precisar ler o rotulo. ── */
+  --color-urgente: #ef426f;
+  --color-alta: #ff6a39;
+  --color-normal: #05c3de;
+  --color-baixa: #8edd65;
+
+  /* ── Semanticas do tema claro (padrao). O escuro sobrescreve
+        estas variaveis mais abaixo. ── */
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f4f6f8;
+  --color-superficie-3: #e9edf1;
+  --color-borda: #dde3e9;
+  --color-texto: #253746;
+  --color-texto-suave: #6a7885;
+
+  --radius-card: 16px;
+
+  --shadow-suave: 0 1px 3px rgba(37, 55, 70, 0.08);
+  --shadow-media: 0 4px 12px rgba(37, 55, 70, 0.1);
+  --shadow-alta: 0 8px 24px rgba(37, 55, 70, 0.14);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tema escuro.
+
+   O manual proibe escuro como padrao -- entao ele e opt-in
+   explicito, gravado em localStorage, nunca automatico.
+
+   As superficies saem do proprio Azul Escuro da marca em vez de
+   um cinza qualquer: mesmo no escuro o app continua dentro da
+   paleta. As cinco cores vibrantes nao mudam, sao a identidade.
+   ───────────────────────────────────────────────────────────── */
+[data-tema="escuro"] {
+  --color-superficie: #253746;
+  --color-superficie-2: #1a2732;
+  --color-superficie-3: #2f4356;
+  --color-borda: #3a5064;
+  --color-texto: #f2f5f7;
+  --color-texto-suave: #9fb0be;
+
+  --shadow-suave: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-media: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-alta: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 html,
@@ -39,6 +97,53 @@ body {
   margin: 0;
   background-color: var(--color-superficie-2);
   color: var(--color-texto);
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Foco visivel e consistente: a ferramenta e usada o dia todo e
+   navegar por teclado precisa ser viavel. */
+:focus-visible {
+  outline: 2px solid var(--color-azul-claro);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respeita quem pediu menos movimento no sistema. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes surge {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulsa {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@utility surge {
+  animation: surge 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@utility esqueleto {
+  background-color: var(--color-superficie-3);
+  border-radius: 8px;
+  animation: pulsa 1.6s ease-in-out infinite;
 }

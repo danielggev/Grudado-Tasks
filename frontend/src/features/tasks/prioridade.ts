@@ -1,4 +1,4 @@
-import type { TaskPriority } from "./api";
+import type { TaskPriority, TaskStatus } from "./api";
 
 export const ROTULO_PRIORIDADE: Record<TaskPriority, string> = {
   urgente: "Urgente",
@@ -7,12 +7,39 @@ export const ROTULO_PRIORIDADE: Record<TaskPriority, string> = {
   baixa: "Baixa",
 };
 
-/** Classes Tailwind por prioridade, lendo as cores definidas em index.css. */
+/**
+ * Cada prioridade recebe uma cor da marca, do quente ao frio. A escala e
+ * legivel antes da leitura do rotulo, que e o que importa num board escaneado
+ * de relance.
+ */
 export const COR_PRIORIDADE: Record<TaskPriority, string> = {
-  urgente: "bg-urgente/10 text-urgente border-urgente/30",
-  alta: "bg-alta/10 text-alta border-alta/30",
-  normal: "bg-normal/10 text-normal border-normal/30",
-  baixa: "bg-baixa/10 text-baixa border-baixa/30",
+  urgente: "bg-urgente text-white",
+  alta: "bg-alta text-azul-escuro",
+  normal: "bg-normal/15 text-normal",
+  baixa: "bg-baixa/25 text-azul-escuro",
+};
+
+/** Faixa lateral do cartao — sinaliza prioridade sem ocupar espaco de texto. */
+export const FAIXA_PRIORIDADE: Record<TaskPriority, string> = {
+  urgente: "bg-urgente",
+  alta: "bg-alta",
+  normal: "bg-normal",
+  baixa: "bg-baixa",
 };
 
 export const ORDEM_PRIORIDADE: TaskPriority[] = ["urgente", "alta", "normal", "baixa"];
+
+export const ROTULO_STATUS: Record<TaskStatus, string> = {
+  a_fazer: "A fazer",
+  em_andamento: "Em andamento",
+  bloqueado: "Bloqueado",
+  concluido: "Concluído",
+};
+
+/** Ponto colorido no topo da coluna: identifica a fase sem precisar ler. */
+export const COR_STATUS: Record<TaskStatus, string> = {
+  a_fazer: "bg-texto-suave",
+  em_andamento: "bg-azul-claro",
+  bloqueado: "bg-laranja",
+  concluido: "bg-verde",
+};
