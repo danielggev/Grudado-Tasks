@@ -7,6 +7,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    // Eventos de alteracao de arquivo do Windows nao atravessam o volume
+    // montado no container Linux: sem polling, o Vite no Docker continua
+    // servindo a versao lida no boot e o HMR nunca dispara. A env var vem do
+    // docker-compose; rodando nativo o watcher normal segue valendo.
+    watch: process.env.VITE_WATCH_POLL ? { usePolling: true, interval: 400 } : undefined,
     proxy: {
       // Proxy em vez de chamar http://localhost:8000 direto: mantem front e API
       // na mesma origem em desenvolvimento, entao o cookie de sessao viaja sem

@@ -27,6 +27,9 @@ services:
       AUTH_PROVIDER: dev
       FRONTEND_URL: http://localhost:5173
       CORS_ORIGINS: '["http://localhost:5173"]'
+      # Mesmo motivo do VITE_WATCH_POLL: eventos de arquivo do Windows nao
+      # atravessam o volume, e sem polling o --reload do uvicorn nao dispara.
+      WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "8000:8000"
     volumes:
@@ -46,6 +49,9 @@ services:
       # O proxy do Vite aponta para localhost por padrao; dentro da rede do
       # Compose o backend atende pelo nome do servico.
       VITE_API_PROXY_TARGET: http://backend:8000
+      # Volume montado do Windows nao propaga eventos de arquivo; sem polling
+      # o HMR nao dispara e o Vite serve codigo velho. Ver vite.config.ts.
+      VITE_WATCH_POLL: "1"
     ports:
       - "5173:5173"
     volumes:
