@@ -1,0 +1,28 @@
+# TLS automatico via Let's Encrypt: basta o dominio apontar para o VPS.
+{$DOMINIO} {
+	encode zstd gzip
+
+	# A API e o WebSocket saem pelo mesmo host da interface. Isso mantem o cookie
+	# de sessao same-origin (SameSite=Lax funciona) e dispensa CORS em producao.
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle /ws* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		root * /srv
+		# SPA: qualquer rota desconhecida devolve o index para o React Router
+		# resolver no cliente. Sem isso, recarregar /times daria 404.
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* Paleta contida para ferramenta interna: o rosa da marca entra como acento
+   pontual, nao como plano de fundo. A identidade completa da Grudado e feita
+   para material promocional -- aqui o que precisa se destacar e a tarefa. */
+@theme {
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f6f7f9;
+  --color-borda: #e3e6ea;
+  --color-texto: #14181d;
+  --color-texto-suave: #64707d;
+  --color-marca: #e5007e;
+  --color-marca-suave: #fdf0f7;
+
+  --color-urgente: #d92d20;
+  --color-alta: #e77c1a;
+  --color-normal: #3b7ddd;
+  --color-baixa: #79879a;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-superficie: #14181d;
+    --color-superficie-2: #1b2027;
+    --color-borda: #2a313a;
+    --color-texto: #eef1f4;
+    --color-texto-suave: #9aa6b3;
+    --color-marca-suave: #33101f;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-superficie-2);
+  color: var(--color-texto);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

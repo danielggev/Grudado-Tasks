@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (ruff, mypy, pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: mypy app tests
+      # Os testes de dominio nao tocam banco. Os marcados com `integracao`
+      # entram na fase 2, junto com um servico de Postgres aqui.
+      - run: pytest -q
+
+  frontend:
+    name: Frontend (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # Falha so em vulnerabilidade critica. O advisory alto aberto hoje
+      # (react-router em modo RSC) nao alcanca uma SPA Vite -- ver README.
+      - run: npm audit --audit-level=critical
+
+  contrato:
+    name: Contrato backend/frontend (tipos do OpenAPI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+
+      - name: Exportar OpenAPI do backend
+        run: python scripts/export_openapi.py
+        working-directory: backend
+
+      - name: Regerar os tipos TypeScript
+        run: npm run gen:api
+        working-directory: frontend
+
+      - name: Falhar se os tipos commitados estiverem defasados
+        run: |
+          if ! git diff --exit-code -- src/types/api.d.ts; then
+            echo "::error::Os tipos gerados estao defasados. Rode 'python backend/scripts/export_openapi.py' e 'npm run gen:api' no frontend, e commite o resultado."
+            exit 1
+          fi
+        working-directory: frontend

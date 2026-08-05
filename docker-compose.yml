@@ -1,0 +1,58 @@
+# Ambiente de desenvolvimento. Para o deploy no VPS, ver deploy/docker-compose.prod.yml.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: grudado
+      POSTGRES_PASSWORD: grudado
+      POSTGRES_DB: grudado_tasks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grudado -d grudado_tasks"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: dev
+      DATABASE_URL: postgresql+psycopg://grudado:grudado@postgres:5432/grudado_tasks
+      AUTH_PROVIDER: dev
+      FRONTEND_URL: http://localhost:5173
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+    # Migracao antes de subir: o app nunca atende com schema defasado.
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    image: node:24-slim
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      # O proxy do Vite aponta para localhost por padrao; dentro da rede do
+      # Compose o backend atende pelo nome do servico.
+      VITE_API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  postgres-data:
+  frontend-node-modules:

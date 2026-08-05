@@ -1,0 +1,18 @@
+# O gate de contrato do CI compara o api.d.ts gerado no Linux com o que esta
+# commitado. Sem normalizar a quebra de linha, um checkout em Windows produziria
+# CRLF e o CI acusaria divergencia que nao existe.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Arquivos gerados: some do diff de review, mas continua versionado e conferido
+# pelo CI.
+frontend/src/types/api.d.ts linguist-generated=true
+package-lock.json linguist-generated=true

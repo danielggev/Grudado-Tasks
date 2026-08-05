@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dados locais
+postgres-data/
+
+# Artefato intermediario da geracao de tipos. O que se versiona e o resultado
+# (frontend/src/types/api.d.ts), nao o spec que o produziu.
+frontend/openapi.json
