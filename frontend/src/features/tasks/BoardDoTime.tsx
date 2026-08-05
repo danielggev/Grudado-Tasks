@@ -20,7 +20,9 @@ export function BoardDoTime({ teamId }: { teamId: string }) {
 
   const [visao, setVisao] = useState<Visao>("board");
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
-  const [criando, setCriando] = useState<{ parentId?: string } | null>(null);
+  const [criando, setCriando] = useState<{ teamId: string; parentId?: string } | null>(
+    null,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -53,7 +55,7 @@ export function BoardDoTime({ teamId }: { teamId: string }) {
         </div>
 
         <div className="ml-auto">
-          <Botao variante="primario" onClick={() => setCriando({})}>
+          <Botao variante="primario" onClick={() => setCriando({ teamId })}>
             Nova tarefa
           </Botao>
         </div>
@@ -70,13 +72,13 @@ export function BoardDoTime({ teamId }: { teamId: string }) {
           taskId={tarefaAberta}
           aoFechar={() => setTarefaAberta(null)}
           aoAbrirSubtarefa={setTarefaAberta}
-          aoCriarSubtarefa={() => setCriando({ parentId: tarefaAberta })}
+          aoCriarSubtarefa={setCriando}
         />
       )}
 
       {criando && (
         <DialogoDeTarefa
-          teamId={teamId}
+          teamId={criando.teamId}
           parentId={criando.parentId}
           aberto
           aoFechar={() => setCriando(null)}

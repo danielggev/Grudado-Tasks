@@ -2,9 +2,15 @@ from enum import StrEnum
 
 
 class TaskStatus(StrEnum):
+    """Tres fases apenas.
+
+    Os valores continuam sendo `a_fazer` e `em_andamento` no banco, mas a
+    interface os chama de "Pendente" e "Em progresso" -- renomear no banco
+    custaria uma migracao de dados sem ganho nenhum.
+    """
+
     A_FAZER = "a_fazer"
     EM_ANDAMENTO = "em_andamento"
-    BLOQUEADO = "bloqueado"
     CONCLUIDO = "concluido"
 
 

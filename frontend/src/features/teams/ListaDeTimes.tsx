@@ -20,7 +20,9 @@ import { usePermissoes, useTimes } from "./hooks";
 export function ListaDeTimes() {
   const [criandoTime, setCriandoTime] = useState(false);
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
-  const [criandoTarefaEm, setCriandoTarefaEm] = useState<string | null>(null);
+  const [criando, setCriando] = useState<{ teamId: string; parentId?: string } | null>(
+    null,
+  );
 
   // Arquivados vem sempre, mas por ultimo e esmaecidos: sem o filtro na tela,
   // esconde-los deixaria um time arquivado inalcancavel a nao ser pela URL.
@@ -47,10 +49,6 @@ export function ListaDeTimes() {
     return mapa;
   }, [tarefas]);
 
-  const teamIdDaAberta = useMemo(
-    () => (tarefas ?? []).find((t) => t.id === tarefaAberta)?.team_id,
-    [tarefas, tarefaAberta],
-  );
 
   return (
     <div>
@@ -95,7 +93,7 @@ export function ListaDeTimes() {
               time={time}
               tarefas={porTime.get(time.id) ?? []}
               aoAbrirTarefa={setTarefaAberta}
-              aoCriarTarefa={() => setCriandoTarefaEm(time.id)}
+              aoCriarTarefa={() => setCriando({ teamId: time.id })}
             />
           ))}
         </div>
@@ -123,20 +121,23 @@ export function ListaDeTimes() {
 
       <DialogoNovoTime aberto={criandoTime} aoFechar={() => setCriandoTime(false)} />
 
-      {criandoTarefaEm && (
+      {criando && (
         <DialogoDeTarefa
-          teamId={criandoTarefaEm}
+          teamId={criando.teamId}
+          parentId={criando.parentId}
           aberto
-          aoFechar={() => setCriandoTarefaEm(null)}
+          aoFechar={() => setCriando(null)}
         />
       )}
 
-      {tarefaAberta && teamIdDaAberta && (
+      {/* Sem depender de nenhum id derivado: o detalhe busca a propria tarefa,
+          entao subtarefa aninhada abre igual a tarefa de topo. */}
+      {tarefaAberta && (
         <DetalheDaTarefa
           taskId={tarefaAberta}
           aoFechar={() => setTarefaAberta(null)}
           aoAbrirSubtarefa={setTarefaAberta}
-          aoCriarSubtarefa={() => setCriandoTarefaEm(teamIdDaAberta)}
+          aoCriarSubtarefa={setCriando}
         />
       )}
     </div>

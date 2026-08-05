@@ -28,17 +28,12 @@ export const FAIXA_PRIORIDADE: Record<TaskPriority, string> = {
 
 export const ORDEM_PRIORIDADE: TaskPriority[] = ["urgente", "alta", "normal", "baixa"];
 
-export const ORDEM_STATUS: TaskStatus[] = [
-  "a_fazer",
-  "em_andamento",
-  "bloqueado",
-  "concluido",
-];
+/** Tres fases. A ordem e a do fluxo de trabalho, nao a alfabetica. */
+export const ORDEM_STATUS: TaskStatus[] = ["a_fazer", "em_andamento", "concluido"];
 
 export const ROTULO_STATUS: Record<TaskStatus, string> = {
   a_fazer: "Pendente",
   em_andamento: "Em progresso",
-  bloqueado: "Bloqueado",
   concluido: "Concluído",
 };
 
@@ -46,7 +41,6 @@ export const ROTULO_STATUS: Record<TaskStatus, string> = {
 export const COR_STATUS: Record<TaskStatus, string> = {
   a_fazer: "bg-texto-suave",
   em_andamento: "bg-azul-claro",
-  bloqueado: "bg-laranja",
   concluido: "bg-verde",
 };
 
@@ -54,6 +48,5 @@ export const COR_STATUS: Record<TaskStatus, string> = {
 export const SELO_STATUS: Record<TaskStatus, string> = {
   a_fazer: "bg-superficie-2 text-texto-suave",
   em_andamento: "bg-azul-claro/15 text-azul-claro",
-  bloqueado: "bg-laranja/15 text-laranja",
   concluido: "bg-verde/25 text-azul-escuro",
 };

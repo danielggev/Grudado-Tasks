@@ -18,7 +18,7 @@ OUTRO_PRAZO = date(2026, 9, 1)
 class TestPrimeiroEngajamento:
     @pytest.mark.parametrize(
         "novo_status",
-        [TaskStatus.EM_ANDAMENTO, TaskStatus.BLOQUEADO, TaskStatus.CONCLUIDO],
+        [TaskStatus.EM_ANDAMENTO, TaskStatus.CONCLUIDO],
     )
     def test_sair_de_a_fazer_e_engajamento(self, novo_status: TaskStatus) -> None:
         assert e_primeiro_engajamento(
@@ -32,7 +32,7 @@ class TestPrimeiroEngajamento:
 
     @pytest.mark.parametrize(
         "status_atual",
-        [TaskStatus.EM_ANDAMENTO, TaskStatus.BLOQUEADO, TaskStatus.CONCLUIDO],
+        [TaskStatus.EM_ANDAMENTO, TaskStatus.CONCLUIDO],
     )
     def test_transicao_entre_status_ja_engajados_nao_recobra(
         self, status_atual: TaskStatus

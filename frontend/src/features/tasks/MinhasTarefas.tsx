@@ -21,17 +21,14 @@ export function MinhasTarefas() {
   const { data: times } = useTimes();
   const { data: usuario } = useUsuarioAtual();
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
-  const [criandoSubtarefaDe, setCriandoSubtarefaDe] = useState<string | null>(null);
+  const [criando, setCriando] = useState<{ teamId: string; parentId?: string } | null>(
+    null,
+  );
 
   const nomePorTime = useMemo(
     () => new Map((times ?? []).map((t) => [t.id, t.name])),
     [times],
   );
-  const teamIdDaAberta = useMemo(
-    () => (tarefas ?? []).find((t) => t.id === tarefaAberta)?.team_id,
-    [tarefas, tarefaAberta],
-  );
-
   const atrasadas = (tarefas ?? []).filter(
     (t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10),
   ).length;
@@ -99,16 +96,16 @@ export function MinhasTarefas() {
           taskId={tarefaAberta}
           aoFechar={() => setTarefaAberta(null)}
           aoAbrirSubtarefa={setTarefaAberta}
-          aoCriarSubtarefa={() => setCriandoSubtarefaDe(tarefaAberta)}
+          aoCriarSubtarefa={setCriando}
         />
       )}
 
-      {criandoSubtarefaDe && teamIdDaAberta && (
+      {criando && (
         <DialogoDeTarefa
-          teamId={teamIdDaAberta}
-          parentId={criandoSubtarefaDe}
+          teamId={criando.teamId}
+          parentId={criando.parentId}
           aberto
-          aoFechar={() => setCriandoSubtarefaDe(null)}
+          aoFechar={() => setCriando(null)}
         />
       )}
     </div>

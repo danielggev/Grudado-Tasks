@@ -21,11 +21,6 @@ def e_primeiro_engajamento(*, status_atual: TaskStatus, novo_status: TaskStatus)
     Definicao operacional de "receber a tarefa": sair de `a_fazer` para qualquer
     outro status. Nao existe estado de aceite no produto -- a tarefa nasce ativa --
     entao este e o unico momento em que da para exigir o prazo de quem assumiu.
-
-    Nota deliberada: mover para `bloqueado` tambem conta. Quem marca uma tarefa
-    como bloqueada ja a tirou da fila e assumiu o acompanhamento dela, entao o
-    prazo continua fazendo sentido. Se um dia isso incomodar, e so excluir
-    BLOQUEADO aqui -- o resto do sistema nao muda.
     """
     return status_atual is STATUS_INICIAL and novo_status is not STATUS_INICIAL
 

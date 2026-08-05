@@ -15,9 +15,9 @@ import type { TaskStatus } from "./api";
 import { ColunaDoBoard } from "./ColunaDoBoard";
 import { erroDePrazoObrigatorio, useBoard, useMoverTarefa } from "./hooks";
 import { PainelDePrazo } from "./PainelDePrazo";
-import { COR_STATUS, ROTULO_STATUS } from "./prioridade";
+import { COR_STATUS, ORDEM_STATUS, ROTULO_STATUS } from "./prioridade";
 
-const COLUNAS: TaskStatus[] = ["a_fazer", "em_andamento", "bloqueado", "concluido"];
+const COLUNAS: TaskStatus[] = ORDEM_STATUS;
 
 export function Board({
   teamId,

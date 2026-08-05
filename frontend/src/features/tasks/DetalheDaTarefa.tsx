@@ -36,7 +36,15 @@ export function DetalheDaTarefa({
   taskId: string;
   aoFechar: () => void;
   aoAbrirSubtarefa: (id: string) => void;
-  aoCriarSubtarefa: () => void;
+  /**
+   * Recebe time e mae prontos.
+   *
+   * Antes o pai tinha que descobrir os dois por conta propria, procurando a
+   * tarefa aberta na lista que ele tinha em maos -- e na tela de Times isso
+   * falhava para subtarefa, que nao aparece no nivel de topo. Quem tem o dado
+   * e este componente, que ja busca a tarefa.
+   */
+  aoCriarSubtarefa: (dados: { teamId: string; parentId: string }) => void;
 }) {
   const { data: tarefa, isPending, error } = useTarefa(taskId);
   const { data: time } = useTime(tarefa?.team_id ?? "");
@@ -252,7 +260,13 @@ export function DetalheDaTarefa({
                 <h3 className="text-xs font-black tracking-wide text-texto-suave uppercase">
                   Subtarefas ({tarefa.subtarefas.length})
                 </h3>
-                <Botao onClick={aoCriarSubtarefa}>Adicionar</Botao>
+                <Botao
+                  onClick={() =>
+                    aoCriarSubtarefa({ teamId: tarefa.team_id, parentId: tarefa.id })
+                  }
+                >
+                  Adicionar
+                </Botao>
               </div>
               {tarefa.subtarefas.length > 0 && (
                 <ul className="divide-y divide-borda overflow-hidden rounded-xl border border-borda">

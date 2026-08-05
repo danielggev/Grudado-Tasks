@@ -559,9 +559,14 @@ export interface components {
         TaskPriority: "urgente" | "alta" | "normal" | "baixa";
         /**
          * TaskStatus
+         * @description Tres fases apenas.
+         *
+         *     Os valores continuam sendo `a_fazer` e `em_andamento` no banco, mas a
+         *     interface os chama de "Pendente" e "Em progresso" -- renomear no banco
+         *     custaria uma migracao de dados sem ganho nenhum.
          * @enum {string}
          */
-        TaskStatus: "a_fazer" | "em_andamento" | "bloqueado" | "concluido";
+        TaskStatus: "a_fazer" | "em_andamento" | "concluido";
         /**
          * TeamRole
          * @description Papel dentro de um time.

@@ -7,9 +7,13 @@ import { useTime } from "../teams/hooks";
 import type { TaskPriority, TaskStatus } from "./api";
 import { useBoard } from "./hooks";
 import { LinhaDeTarefa } from "./LinhaDeTarefa";
-import { ORDEM_PRIORIDADE, ROTULO_PRIORIDADE, ROTULO_STATUS } from "./prioridade";
+import {
+  ORDEM_PRIORIDADE,
+  ORDEM_STATUS,
+  ROTULO_PRIORIDADE,
+  ROTULO_STATUS,
+} from "./prioridade";
 
-const STATUS: TaskStatus[] = ["a_fazer", "em_andamento", "bloqueado", "concluido"];
 
 /**
  * Mesma fonte de dados do board (useBoard) -- filtros sao recorte no cliente.
@@ -103,7 +107,7 @@ export function ListaDoTime({
           className={seletor}
         >
           <option value="">Todos os status</option>
-          {STATUS.map((s) => (
+          {ORDEM_STATUS.map((s) => (
             <option key={s} value={s}>
               {ROTULO_STATUS[s]}
             </option>
