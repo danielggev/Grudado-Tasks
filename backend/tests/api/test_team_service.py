@@ -10,11 +10,13 @@ banco. O que se verifica aqui e a costura: consultas, RBAC ponta a ponta e as
 restricoes que so o banco garante.
 """
 
+from uuid import uuid4
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.enums import OrgRole, TeamRole
-from app.domain.errors import AcessoNegado
+from app.domain.errors import AcessoNegado, RecursoNaoEncontrado
 from app.domain.team_rules import MembroJaNoTime, TimeArquivado, UltimoLeadDoTime
 from app.schemas.team import AdicionarMembro, TimeAtualizar, TimeCriar
 from app.services import team_service
@@ -88,15 +90,39 @@ class TestVisibilidade:
 
         assert visiveis[0][1] == 2
 
-    async def test_quem_nao_e_do_time_nao_o_alcanca(self, session: AsyncSession) -> None:
+    async def test_quem_nao_e_do_time_recebe_nao_encontrado(
+        self, session: AsyncSession
+    ) -> None:
+        """Nao encontrado, e nao acesso negado.
+
+        A distincao importa: AcessoNegado vira 403 na borda, o que confirmaria
+        que o time existe. RecursoNaoEncontrado vira 404, igual ao que um time
+        inexistente devolveria.
+        """
         dono = await cria_usuario(session, nome="Dono")
         estranho = await cria_usuario(session, nome="Estranho")
         time = await cria_time_com_lead(session, nome="Design", lead=dono)
 
-        with pytest.raises(AcessoNegado):
+        with pytest.raises(RecursoNaoEncontrado):
             await team_service.obtem_time(
                 session, await contexto_de(session, estranho), time.id
             )
+
+    async def test_time_inexistente_e_time_alheio_sao_indistinguiveis(
+        self, session: AsyncSession
+    ) -> None:
+        dono = await cria_usuario(session, nome="Dono")
+        estranho = await cria_usuario(session, nome="Estranho")
+        time = await cria_time_com_lead(session, nome="Design", lead=dono)
+        ctx = await contexto_de(session, estranho)
+
+        with pytest.raises(RecursoNaoEncontrado) as alheio:
+            await team_service.obtem_time(session, ctx, time.id)
+
+        with pytest.raises(RecursoNaoEncontrado) as inexistente:
+            await team_service.obtem_time(session, ctx, uuid4())
+
+        assert alheio.value.mensagem == inexistente.value.mensagem
 
     async def test_arquivado_some_da_lista_por_padrao(self, session: AsyncSession) -> None:
         lead = await cria_usuario(session, nome="Lead")

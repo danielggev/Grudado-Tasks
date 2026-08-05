@@ -1,8 +1,11 @@
+import asyncio
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable, Mapping
 from uuid import uuid4
 
 import pytest
+from _pytest.config import Config
+from _pytest.nodes import Item
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.base import Base
@@ -16,6 +19,28 @@ SEM_BANCO = pytest.mark.skipif(
     not URL_TESTE,
     reason="Defina DATABASE_URL_TESTE para rodar os testes de integracao.",
 )
+
+
+def pytest_asyncio_loop_factories(
+    config: Config, item: Item
+) -> Mapping[str, Callable[[], asyncio.AbstractEventLoop]] | None:
+    """No Windows, o asyncio usa ProactorEventLoop por padrao -- e o psycopg em
+    modo async nao funciona sobre ele, entao todo teste que toca banco falha.
+
+    Nao afeta producao: o backend roda em container Linux. Isso existe so para
+    que a suite tambem passe quando rodada nativamente no Windows, em vez de
+    apenas no Docker e no CI.
+
+    Devolver None em outros sistemas mantem o comportamento padrao do plugin.
+
+    A checagem usa `os.name` e nao `sys.platform` de proposito: o mypy estreita
+    `sys.platform` para o sistema onde esta rodando, entao um dos dois ramos
+    apareceria como inalcancavel -- no Windows aqui, no Linux do CI.
+    """
+    del config, item
+    if os.name == "nt":
+        return {"selector": asyncio.SelectorEventLoop}
+    return None
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ from fastapi.routing import APIRoute
 from app.api.v1.router import router as router_v1
 from app.auth.errors import AutenticacaoFalhou
 from app.config import get_settings
-from app.domain.errors import AcessoNegado, RegraDeDominioViolada
+from app.domain.errors import AcessoNegado, RecursoNaoEncontrado, RegraDeDominioViolada
 
 
 def _id_de_operacao(route: APIRoute) -> str:
@@ -36,6 +36,19 @@ async def _erro_de_acesso(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
         content={"detail": cast(AcessoNegado, exc).mensagem},
+    )
+
+
+async def _nao_encontrado(request: Request, exc: Exception) -> JSONResponse:
+    """404 tambem para "existe, mas nao e seu".
+
+    Ver RecursoNaoEncontrado: responder 403 nesse caso confirmaria a existencia
+    do recurso a quem nao deveria saber dela.
+    """
+    del request
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": cast(RecursoNaoEncontrado, exc).mensagem},
     )
 
 
@@ -70,6 +83,7 @@ def create_app() -> FastAPI:
     # status code. Nada dentro de app/domain conhece FastAPI.
     app.add_exception_handler(RegraDeDominioViolada, _erro_de_regra)
     app.add_exception_handler(AcessoNegado, _erro_de_acesso)
+    app.add_exception_handler(RecursoNaoEncontrado, _nao_encontrado)
     app.add_exception_handler(AutenticacaoFalhou, _erro_de_autenticacao)
 
     app.include_router(router_v1, prefix="/api/v1")

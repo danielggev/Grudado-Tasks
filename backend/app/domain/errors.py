@@ -21,9 +21,23 @@ class PrazoObrigatorioNoEngajamento(RegraDeDominioViolada):
 
 
 class AcessoNegado(Exception):
-    """Falta de permissao. A borda traduz para 403 (ou 404, quando revelar a
-    existencia do recurso ja seria vazamento)."""
+    """Falta de permissao sobre um recurso que o usuario ja pode enxergar.
+    A borda traduz para 403."""
 
     def __init__(self, mensagem: str = "Voce nao tem acesso a este recurso.") -> None:
+        super().__init__(mensagem)
+        self.mensagem = mensagem
+
+
+class RecursoNaoEncontrado(Exception):
+    """Recurso inexistente -- ou existente e fora do alcance do usuario.
+
+    Traduzido para 404 na borda, e de proposito os dois casos sao
+    indistinguiveis: responder 403 para "existe mas nao e seu" confirmaria a
+    existencia do recurso a quem nao deveria saber dela. Por isso este erro nao
+    herda de AcessoNegado, que vira 403.
+    """
+
+    def __init__(self, mensagem: str = "Recurso nao encontrado.") -> None:
         super().__init__(mensagem)
         self.mensagem = mensagem

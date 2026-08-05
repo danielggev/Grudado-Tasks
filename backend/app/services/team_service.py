@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db.models import Team, TeamMember, User
 from app.domain.enums import TeamRole
-from app.domain.errors import AcessoNegado
+from app.domain.errors import RecursoNaoEncontrado
 from app.domain.permissions import (
     ContextoDeAcesso,
     exigir,
@@ -26,19 +26,18 @@ from app.domain.team_rules import (
 from app.schemas.team import AdicionarMembro, TimeAtualizar, TimeCriar
 
 
-class TimeNaoEncontrado(AcessoNegado):
-    """404 e 403 respondem a mesma coisa aqui de proposito.
+class TimeNaoEncontrado(RecursoNaoEncontrado):
+    """Vira 404, tanto para time inexistente quanto para time de outra pessoa.
 
-    Distinguir "nao existe" de "existe mas nao e seu" contaria a quem esta de
-    fora quais times existem na empresa. Para quem nao tem acesso, os dois casos
-    sao indistinguiveis.
+    Os dois casos precisam ser indistinguiveis: um 403 confirmaria que o time
+    existe, revelando a estrutura de times da empresa a quem esta de fora.
     """
 
     def __init__(self) -> None:
         super().__init__("Time nao encontrado.")
 
 
-class UsuarioNaoEncontrado(AcessoNegado):
+class UsuarioNaoEncontrado(RecursoNaoEncontrado):
     def __init__(self) -> None:
         super().__init__("Usuario nao encontrado.")
 

@@ -118,9 +118,13 @@ ninguém capaz de gerenciá-lo.
 sem isso o time viraria refém de um admin para qualquer mudança de membro. A
 interface desabilita o controle antes do erro, mas quem garante é o backend.
 
-Quem não é do time recebe **404, não 403**, ao tentar acessá-lo. Distinguir
-"não existe" de "existe mas não é seu" contaria a quem está de fora quais times
-existem na empresa.
+Quem não é do time recebe **404, não 403**, ao tentar acessá-lo — a mesma
+resposta, com a mesma mensagem, que um time inexistente devolve. Um 403
+confirmaria a existência do time, revelando a estrutura da empresa a quem está
+de fora.
+
+É por isso que `RecursoNaoEncontrado` não herda de `AcessoNegado`: são status
+diferentes na borda, e herdar faria o 404 virar 403 silenciosamente.
 
 ### Hierarquia de tarefas já no modelo
 
