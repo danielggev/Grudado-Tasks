@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 
 import { Avatar } from "../../app/Layout";
 import { Botao } from "../../components/ui/Botao";
-import type { TarefaResumo } from "../tasks/api";
+import type { TarefaResumo, TaskStatus } from "../tasks/api";
 import { BandeiraDePrioridade } from "../tasks/BandeiraDePrioridade";
+import { FiltroDeStatus } from "../tasks/FiltroDeStatus";
 import { ROTULO_STATUS, SELO_STATUS } from "../tasks/prioridade";
 import type { TimeResumo } from "./api";
 import { sotaqueDe } from "./sotaque";
@@ -29,6 +30,8 @@ export function ColunaDeTime({
   aoAbrirTarefa: (taskId: string) => void;
   aoCriarTarefa: () => void;
 }) {
+  const [filtro, setFiltro] = useState<TaskStatus | null>(null);
+
   const arquivado = time.archived_at !== null;
   const abertas = tarefas.filter((t) => t.status !== "concluido");
   const concluidas = tarefas.length - abertas.length;
@@ -36,13 +39,22 @@ export function ColunaDeTime({
   // Concluidas ficam no fim: o que importa e o que esta em aberto.
   const ordenadas = [...abertas, ...tarefas.filter((t) => t.status === "concluido")];
 
+  // O filtro age no status da propria tarefa de topo. As subtarefas dela
+  // continuam aninhadas, independente do status delas -- separa-las da mae
+  // desfaria a hierarquia que o cartao existe para mostrar.
+  const visiveis = filtro ? ordenadas.filter((t) => t.status === filtro) : ordenadas;
+
   return (
     <section
-      className={`flex w-80 shrink-0 flex-col overflow-hidden rounded-card border border-borda bg-superficie shadow-suave ${
+      // Sem `overflow-hidden`: ele cortaria o menu do filtro. O arredondamento
+      // do topo fica no proprio invólucro da faixa.
+      className={`flex w-80 shrink-0 flex-col rounded-card border border-borda bg-superficie shadow-suave ${
         arquivado ? "opacity-60" : ""
       }`}
     >
-      <span aria-hidden="true" className={`h-1.5 shrink-0 ${sotaqueDe(time.id)}`} />
+      <div className="overflow-hidden rounded-t-card">
+        <span aria-hidden="true" className={`block h-1.5 ${sotaqueDe(time.id)}`} />
+      </div>
 
       <header className="flex items-start gap-2 px-4 pt-3 pb-2">
         <div className="min-w-0 flex-1">
@@ -54,8 +66,12 @@ export function ColunaDeTime({
           </Link>
           <p className="mt-0.5 text-[11px] text-texto-suave">
             {time.total_de_membros} {time.total_de_membros === 1 ? "pessoa" : "pessoas"}
-            {abertas.length > 0 && ` · ${abertas.length} em aberto`}
-            {concluidas > 0 && ` · ${concluidas} concluída${concluidas > 1 ? "s" : ""}`}
+            {filtro
+              ? ` · ${visiveis.length} ${ROTULO_STATUS[filtro].toLowerCase()}`
+              : (abertas.length > 0 ? ` · ${abertas.length} em aberto` : "") +
+                (concluidas > 0
+                  ? ` · ${concluidas} concluída${concluidas > 1 ? "s" : ""}`
+                  : "")}
           </p>
         </div>
 
@@ -64,11 +80,13 @@ export function ColunaDeTime({
             arquivado
           </span>
         )}
+
+        <FiltroDeStatus valor={filtro} aoMudar={setFiltro} />
       </header>
 
       <div className="flex max-h-[26rem] flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
-        {ordenadas.length > 0 ? (
-          ordenadas.map((tarefa) => (
+        {visiveis.length > 0 ? (
+          visiveis.map((tarefa) => (
             <ItemComSubtarefas
               key={tarefa.id}
               tarefa={tarefa}
@@ -77,7 +95,9 @@ export function ColunaDeTime({
           ))
         ) : (
           <p className="px-2 py-6 text-center text-xs text-texto-suave">
-            Nenhuma tarefa ainda.
+            {filtro
+              ? `Nada em "${ROTULO_STATUS[filtro]}".`
+              : "Nenhuma tarefa ainda."}
           </p>
         )}
       </div>
