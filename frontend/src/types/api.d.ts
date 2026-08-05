@@ -591,6 +591,8 @@ export interface components {
         TimeCriar: {
             /** Description */
             description?: string | null;
+            /** Membros */
+            membros?: string[];
             /** Name */
             name: string;
         };

@@ -11,6 +11,10 @@ class TimeCriar(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
 
+    # Quem entra junto com o time. Quem cria vira lead automaticamente e nao
+    # precisa constar aqui -- se constar, e ignorado em vez de duplicar.
+    membros: list[UUID] = Field(default_factory=list)
+
 
 class TimeAtualizar(BaseModel):
     """Campos ausentes ficam como estao.

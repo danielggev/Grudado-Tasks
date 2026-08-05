@@ -122,9 +122,42 @@ async def cria_time(
     session.add(TeamMember(team_id=time.id, user_id=ctx.user_id, role=TeamRole.LEAD))
     await session.flush()
 
-    # Recarrega para que a resposta ja saia com o vinculo do criador populado,
-    # sem depender de lazy load fora do escopo da sessao.
+    await _adiciona_membros_iniciais(session, time, dados.membros, criador_id=ctx.user_id)
+
+    # Recarrega para que a resposta ja saia com os vinculos populados, sem
+    # depender de lazy load fora do escopo da sessao.
     return await _carrega_com_membros(session, time.id)
+
+
+async def _adiciona_membros_iniciais(
+    session: AsyncSession, time: Team, user_ids: list[UUID], *, criador_id: UUID
+) -> None:
+    """Vincula quem foi escolhido no formulario de criacao.
+
+    O criador ja entrou como lead; se ele aparecer na lista, e descartado --
+    a alternativa seria violar a chave primaria composta de team_members.
+    """
+    desejados = set(user_ids) - {criador_id}
+    if not desejados:
+        return
+
+    encontrados = set(
+        (
+            await session.execute(
+                select(User.id).where(User.id.in_(desejados), User.is_active.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if encontrados != desejados:
+        raise UsuarioNaoEncontrado()
+
+    for user_id in desejados:
+        session.add(
+            TeamMember(team_id=time.id, user_id=user_id, role=TeamRole.MEMBER)
+        )
+    await session.flush()
 
 
 async def atualiza_time(

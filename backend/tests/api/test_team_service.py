@@ -46,6 +46,61 @@ class TestCriacao:
         with pytest.raises(AcessoNegado):
             await team_service.cria_time(session, ctx, TimeCriar(name="Design"))
 
+    async def test_cria_ja_com_os_membros_escolhidos(self, session: AsyncSession) -> None:
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+        ana = await cria_usuario(session, nome="Ana")
+        bruno = await cria_usuario(session, nome="Bruno")
+        ctx = await contexto_de(session, admin)
+
+        time = await team_service.cria_time(
+            session, ctx, TimeCriar(name="Design", membros=[ana.id, bruno.id])
+        )
+
+        papeis = {v.user_id: v.role for v in time.members}
+        assert papeis == {
+            admin.id: TeamRole.LEAD,
+            ana.id: TeamRole.MEMBER,
+            bruno.id: TeamRole.MEMBER,
+        }
+
+    async def test_criador_na_lista_nao_duplica_o_vinculo(
+        self, session: AsyncSession
+    ) -> None:
+        """A chave primaria de team_members e composta: inserir de novo
+        estouraria. O criador na lista precisa ser descartado."""
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+        ctx = await contexto_de(session, admin)
+
+        time = await team_service.cria_time(
+            session, ctx, TimeCriar(name="Design", membros=[admin.id])
+        )
+
+        assert len(time.members) == 1
+        assert time.members[0].role is TeamRole.LEAD
+
+    async def test_membro_inexistente_recusa_a_criacao(
+        self, session: AsyncSession
+    ) -> None:
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+
+        with pytest.raises(RecursoNaoEncontrado):
+            await team_service.cria_time(
+                session,
+                await contexto_de(session, admin),
+                TimeCriar(name="Design", membros=[uuid4()]),
+            )
+
+    async def test_sem_membros_escolhidos_fica_so_o_criador(
+        self, session: AsyncSession
+    ) -> None:
+        admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
+
+        time = await team_service.cria_time(
+            session, await contexto_de(session, admin), TimeCriar(name="Design")
+        )
+
+        assert [v.role for v in time.members] == [TeamRole.LEAD]
+
     async def test_nome_repetido_ganha_slug_com_sufixo(self, session: AsyncSession) -> None:
         admin = await cria_usuario(session, nome="Admin", papel=OrgRole.ADMIN)
         ctx = await contexto_de(session, admin)

@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { Avatar } from "../../app/Layout";
 import { Aviso } from "../../components/ui/Aviso";
 import { Botao } from "../../components/ui/Botao";
 import { Dialogo } from "../../components/ui/Dialogo";
+import { useUsuarioAtual } from "../auth/hooks";
+import { useUsuarios } from "../usuarios/api";
 import { useCriarTime } from "./hooks";
 
 const CAMPO =
@@ -19,17 +22,39 @@ export function DialogoNovoTime({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [membros, setMembros] = useState<string[]>([]);
+  const [busca, setBusca] = useState("");
+
   const criar = useCriarTime();
   const navegar = useNavigate();
+  const { data: usuarios } = useUsuarios();
+  const { data: eu } = useUsuarioAtual();
+
+  // Quem cria ja entra como lead; listá-lo entre os selecionáveis daria a
+  // impressao de que dá para deixá-lo de fora, o que nao e verdade.
+  const selecionaveis = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return (usuarios ?? [])
+      .filter((u) => u.id !== eu?.id)
+      .filter((u) => !termo || u.name.toLowerCase().includes(termo));
+  }, [usuarios, eu?.id, busca]);
+
+  function alterna(userId: string) {
+    setMembros((atual) =>
+      atual.includes(userId) ? atual.filter((id) => id !== userId) : [...atual, userId],
+    );
+  }
 
   function enviar(evento: FormEvent) {
     evento.preventDefault();
     criar.mutate(
-      { name: name.trim(), description: description.trim() || null },
+      { name: name.trim(), description: description.trim() || null, membros },
       {
         onSuccess: (time) => {
           setName("");
           setDescription("");
+          setMembros([]);
+          setBusca("");
           aoFechar();
           navegar(`/times/${time.id}`);
         },
@@ -60,15 +85,69 @@ export function DialogoNovoTime({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={2000}
-            rows={3}
+            rows={2}
             placeholder="Opcional"
             className={`${CAMPO} resize-y`}
           />
         </label>
 
-        <p className="text-[11px] text-texto-suave">
-          Você entra como lead do time e pode adicionar as pessoas em seguida.
-        </p>
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className={ROTULO}>
+            Pessoas{membros.length > 0 && ` (${membros.length})`}
+          </legend>
+
+          {eu && (
+            <p className="flex items-center gap-2 rounded-xl bg-amarelo/15 px-2.5 py-2 text-xs">
+              <Avatar nome={eu.name} tamanho="xs" />
+              <span className="font-semibold">{eu.name}</span>
+              <span className="ml-auto rounded-full bg-amarelo/40 px-2 py-0.5 text-[10px] font-black tracking-wide text-azul-escuro uppercase">
+                lead
+              </span>
+            </p>
+          )}
+
+          {/* A busca so aparece quando a lista justifica: numa empresa de 15
+              pessoas, rolar costuma ser mais rapido que digitar. */}
+          {selecionaveis.length > 8 && (
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar pessoa..."
+              aria-label="Buscar pessoa"
+              className={CAMPO}
+            />
+          )}
+
+          <div className="flex max-h-52 flex-col gap-0.5 overflow-y-auto rounded-xl border border-borda p-2">
+            {selecionaveis.length > 0 ? (
+              selecionaveis.map((usuario) => (
+                <label
+                  key={usuario.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition hover:bg-superficie-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={membros.includes(usuario.id)}
+                    onChange={() => alterna(usuario.id)}
+                    className="accent-rosa"
+                  />
+                  <Avatar nome={usuario.name} tamanho="xs" />
+                  <span className="min-w-0 flex-1 truncate font-semibold">
+                    {usuario.name}
+                  </span>
+                </label>
+              ))
+            ) : (
+              <p className="px-2 py-3 text-center text-xs text-texto-suave">
+                {busca ? "Ninguém com esse nome." : "Não há outras pessoas cadastradas."}
+              </p>
+            )}
+          </div>
+
+          <p className="text-[11px] text-texto-suave">
+            Todas entram como membro. Dá para promover a lead depois, dentro do time.
+          </p>
+        </fieldset>
 
         <Aviso erro={criar.error} />
 
