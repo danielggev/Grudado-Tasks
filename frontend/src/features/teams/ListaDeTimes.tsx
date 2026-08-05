@@ -18,14 +18,23 @@ import { usePermissoes, useTimes } from "./hooks";
  * para saber o que os times estavam fazendo sem entrar em cada um.
  */
 export function ListaDeTimes() {
-  const [incluirArquivados, setIncluirArquivados] = useState(false);
   const [criandoTime, setCriandoTime] = useState(false);
   const [tarefaAberta, setTarefaAberta] = useState<string | null>(null);
   const [criandoTarefaEm, setCriandoTarefaEm] = useState<string | null>(null);
 
-  const { data: times, isPending, error } = useTimes(incluirArquivados);
+  // Arquivados vem sempre, mas por ultimo e esmaecidos: sem o filtro na tela,
+  // esconde-los deixaria um time arquivado inalcancavel a nao ser pela URL.
+  const { data: times, isPending, error } = useTimes(true);
   const { data: tarefas, error: erroTarefas } = usePanorama();
   const { podeCriarTime } = usePermissoes();
+
+  const ordenados = useMemo(
+    () =>
+      [...(times ?? [])].sort(
+        (a, b) => Number(a.archived_at !== null) - Number(b.archived_at !== null),
+      ),
+    [times],
+  );
 
   // Uma consulta traz as tarefas de todos os times; o agrupamento e local.
   const porTime = useMemo(() => {
@@ -51,18 +60,8 @@ export function ListaDeTimes() {
           <div className="mt-2 h-1 w-12 rounded-full bg-azul-claro" />
         </div>
 
-        <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-texto-suave">
-          <input
-            type="checkbox"
-            checked={incluirArquivados}
-            onChange={(e) => setIncluirArquivados(e.target.checked)}
-            className="accent-rosa"
-          />
-          Mostrar arquivados
-        </label>
-
         {podeCriarTime && (
-          <Botao variante="primario" onClick={() => setCriandoTime(true)}>
+          <Botao variante="primario" className="ml-auto" onClick={() => setCriandoTime(true)}>
             Novo time
           </Botao>
         )}
@@ -88,9 +87,9 @@ export function ListaDeTimes() {
             </div>
           ))}
         </div>
-      ) : times && times.length > 0 ? (
+      ) : ordenados.length > 0 ? (
         <div className="surge mt-6 flex gap-3 overflow-x-auto pb-3">
-          {times.map((time) => (
+          {ordenados.map((time) => (
             <ColunaDeTime
               key={time.id}
               time={time}

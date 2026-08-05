@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Avatar } from "../../app/Layout";
 import { Botao } from "../../components/ui/Botao";
 import type { TarefaResumo } from "../tasks/api";
-import { COR_PRIORIDADE, COR_STATUS, ROTULO_PRIORIDADE } from "../tasks/prioridade";
+import { BandeiraDePrioridade } from "../tasks/BandeiraDePrioridade";
+import { ROTULO_STATUS, SELO_STATUS } from "../tasks/prioridade";
 import type { TimeResumo } from "./api";
 import { sotaqueDe } from "./sotaque";
 
@@ -102,13 +103,12 @@ function MiniCartao({ tarefa, aoAbrir }: { tarefa: TarefaResumo; aoAbrir: () => 
     <button
       type="button"
       onClick={aoAbrir}
-      className="w-full rounded-xl border border-borda bg-superficie px-3 py-2 text-left transition hover:border-azul-claro/50 hover:bg-superficie-2"
+      className="w-full rounded-xl border border-borda bg-superficie px-3 py-2.5 text-left transition hover:border-azul-claro/50 hover:bg-superficie-2"
     >
       <div className="flex items-start gap-2">
-        <span
-          aria-hidden="true"
-          className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${COR_STATUS[tarefa.status]}`}
-        />
+        <span className="mt-px">
+          <BandeiraDePrioridade prioridade={tarefa.priority} tamanho={13} />
+        </span>
         <span
           className={`min-w-0 flex-1 text-xs leading-snug font-semibold ${
             concluida ? "text-texto-suave line-through" : "text-texto"
@@ -118,22 +118,25 @@ function MiniCartao({ tarefa, aoAbrir }: { tarefa: TarefaResumo; aoAbrir: () => 
         </span>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-3.5">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[21px]">
         <span
-          className={`rounded-full px-1.5 py-0.5 text-[9px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${SELO_STATUS[tarefa.status]}`}
         >
-          {ROTULO_PRIORIDADE[tarefa.priority]}
+          {ROTULO_STATUS[tarefa.status]}
         </span>
 
-        {tarefa.due_date && (
-          <span
-            className={`text-[10px] font-semibold ${atrasada ? "text-rosa" : "text-texto-suave"}`}
-          >
-            {atrasada
+        <span
+          className={`flex items-center gap-1 text-[10px] font-semibold ${
+            atrasada ? "text-rosa" : "text-texto-suave"
+          }`}
+        >
+          <IconeCalendario />
+          {tarefa.due_date
+            ? atrasada
               ? "Atrasada"
-              : FORMATADOR.format(new Date(`${tarefa.due_date}T00:00:00Z`))}
-          </span>
-        )}
+              : FORMATADOR.format(new Date(`${tarefa.due_date}T00:00:00Z`))
+            : "Sem prazo"}
+        </span>
 
         {tarefa.total_de_subtarefas > 0 && (
           <span className="text-[10px] font-semibold text-texto-suave">
@@ -141,20 +144,44 @@ function MiniCartao({ tarefa, aoAbrir }: { tarefa: TarefaResumo; aoAbrir: () => 
           </span>
         )}
 
-        <span className="ml-auto flex -space-x-1">
+        <span className="ml-auto flex items-center">
           {tarefa.e_do_time ? (
-            <span className="text-[9px] font-semibold text-texto-suave">Do time</span>
+            <span className="rounded-full bg-amarelo/25 px-1.5 py-0.5 text-[9px] font-semibold text-texto-suave">
+              Do time
+            </span>
           ) : (
-            tarefa.responsaveis
-              .slice(0, 3)
-              .map((p) => (
+            <span className="flex -space-x-1">
+              {tarefa.responsaveis.slice(0, 3).map((p) => (
                 <span key={p.id} className="rounded-full ring-2 ring-superficie">
                   <Avatar nome={p.name} tamanho="xs" />
                 </span>
-              ))
+              ))}
+            </span>
           )}
         </span>
       </div>
     </button>
+  );
+}
+
+function IconeCalendario() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="16"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M3 10h18M8 3v4M16 3v4"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

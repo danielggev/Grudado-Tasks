@@ -10,8 +10,8 @@ import { useTime } from "../teams/hooks";
 import type { TaskPriority } from "./api";
 import { useAtualizarTarefa, useExcluirTarefa, useTarefa } from "./hooks";
 import { PainelDeAtividade } from "./PainelDeAtividade";
+import { BandeiraDePrioridade } from "./BandeiraDePrioridade";
 import {
-  COR_PRIORIDADE,
   COR_STATUS,
   ORDEM_PRIORIDADE,
   ROTULO_PRIORIDADE,
@@ -103,9 +103,10 @@ export function DetalheDaTarefa({
               {ROTULO_STATUS[tarefa.status]}
             </span>
 
-            <span
-              className={`rounded-full px-2.5 py-1 text-[10px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
-            >
+            {/* No detalhe ha espaco: bandeira e rotulo juntos, para quem ainda
+                esta aprendendo o codigo de cores dos cartoes. */}
+            <span className="flex items-center gap-1.5 rounded-full bg-superficie-2 px-2.5 py-1 text-[10px] font-black tracking-wide uppercase">
+              <BandeiraDePrioridade prioridade={tarefa.priority} tamanho={12} />
               {ROTULO_PRIORIDADE[tarefa.priority]}
             </span>
 

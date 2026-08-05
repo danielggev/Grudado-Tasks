@@ -1,6 +1,7 @@
 import { Avatar } from "../../app/Layout";
 import type { TarefaResumo } from "./api";
-import { COR_PRIORIDADE, COR_STATUS, ROTULO_PRIORIDADE, ROTULO_STATUS } from "./prioridade";
+import { BandeiraDePrioridade } from "./BandeiraDePrioridade";
+import { ROTULO_STATUS, SELO_STATUS } from "./prioridade";
 
 const FORMATADOR = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
 
@@ -37,10 +38,7 @@ export function LinhaDeTarefa({
       onClick={aoAbrir}
       className="group flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-superficie-2"
     >
-      <span
-        aria-hidden="true"
-        className={`h-2 w-2 shrink-0 rounded-full ${COR_STATUS[tarefa.status]}`}
-      />
+      <BandeiraDePrioridade prioridade={tarefa.priority} tamanho={13} />
 
       <span
         className={`min-w-0 flex-1 truncate text-sm font-semibold ${
@@ -70,14 +68,10 @@ export function LinhaDeTarefa({
         </span>
       )}
 
-      <span className="hidden w-24 shrink-0 text-xs text-texto-suave sm:inline">
-        {ROTULO_STATUS[tarefa.status]}
-      </span>
-
       <span
-        className={`w-16 shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
+        className={`hidden w-28 shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-semibold sm:inline ${SELO_STATUS[tarefa.status]}`}
       >
-        {ROTULO_PRIORIDADE[tarefa.priority]}
+        {ROTULO_STATUS[tarefa.status]}
       </span>
 
       <span

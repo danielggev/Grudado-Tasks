@@ -3,7 +3,8 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Avatar } from "../../app/Layout";
 import type { TarefaResumo } from "./api";
-import { COR_PRIORIDADE, FAIXA_PRIORIDADE, ROTULO_PRIORIDADE } from "./prioridade";
+import { BandeiraDePrioridade } from "./BandeiraDePrioridade";
+import { FAIXA_PRIORIDADE } from "./prioridade";
 
 const FORMATADOR_DE_DATA = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -64,21 +65,20 @@ export function CartaoDeTarefa({
         className={`absolute inset-y-0 left-0 w-1.5 ${FAIXA_PRIORIDADE[tarefa.priority]}`}
       />
 
-      <p
-        className={`text-sm leading-snug font-semibold ${
-          concluida ? "text-texto-suave line-through" : "text-texto"
-        }`}
-      >
-        {tarefa.title}
-      </p>
+      <div className="flex items-start gap-1.5">
+        <span className="mt-0.5">
+          <BandeiraDePrioridade prioridade={tarefa.priority} />
+        </span>
+        <p
+          className={`min-w-0 flex-1 text-sm leading-snug font-semibold ${
+            concluida ? "text-texto-suave line-through" : "text-texto"
+          }`}
+        >
+          {tarefa.title}
+        </p>
+      </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide uppercase ${COR_PRIORIDADE[tarefa.priority]}`}
-        >
-          {ROTULO_PRIORIDADE[tarefa.priority]}
-        </span>
-
         {prazoFormatado && (
           <span
             className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
