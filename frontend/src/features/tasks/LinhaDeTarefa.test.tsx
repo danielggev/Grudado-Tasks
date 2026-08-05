@@ -18,6 +18,7 @@ function tarefa(extra: Partial<TarefaResumo> = {}): TarefaResumo {
     e_do_time: true,
     total_de_subtarefas: 0,
     subtarefas_concluidas: 0,
+    subtarefas: [],
     ...extra,
   };
 }

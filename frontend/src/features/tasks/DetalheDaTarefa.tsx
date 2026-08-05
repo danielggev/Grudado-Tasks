@@ -6,14 +6,23 @@ import { Botao } from "../../components/ui/Botao";
 import { Confirmacao } from "../../components/ui/Confirmacao";
 import { Dialogo } from "../../components/ui/Dialogo";
 import { Esqueleto } from "../../components/ui/Esqueleto";
+import { ApiError } from "../../lib/api-client";
 import { useTime } from "../teams/hooks";
-import type { TaskPriority } from "./api";
-import { useAtualizarTarefa, useExcluirTarefa, useTarefa } from "./hooks";
-import { PainelDeAtividade } from "./PainelDeAtividade";
+import type { TaskPriority, TaskStatus } from "./api";
 import { BandeiraDePrioridade } from "./BandeiraDePrioridade";
+import {
+  erroDePrazoObrigatorio,
+  useAtualizarTarefa,
+  useExcluirTarefa,
+  useMoverTarefa,
+  useTarefa,
+} from "./hooks";
+import { PainelDeAtividade } from "./PainelDeAtividade";
+import { PainelDePrazo } from "./PainelDePrazo";
 import {
   COR_STATUS,
   ORDEM_PRIORIDADE,
+  ORDEM_STATUS,
   ROTULO_PRIORIDADE,
   ROTULO_STATUS,
 } from "./prioridade";
@@ -40,6 +49,8 @@ export function DetalheDaTarefa({
   const [priority, setPriority] = useState<TaskPriority>("normal");
   const [responsaveis, setResponsaveis] = useState<string[]>([]);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [statusPendente, setStatusPendente] = useState<TaskStatus | null>(null);
+  const mover = useMoverTarefa(tarefa?.team_id ?? "");
 
   // Sincroniza o formulario sempre que a tarefa (re)carrega -- inclusive apos
   // outra pessoa move-la pelo board, o que invalida a query e traz dado novo.
@@ -84,6 +95,22 @@ export function DetalheDaTarefa({
       priority,
       responsaveis,
     });
+  }
+
+  /**
+   * Mudar status passa pelo mesmo endpoint do arrasto, entao a regra do prazo
+   * vale aqui tambem: sair de "Pendente" sem prazo devolve 422 e abre o painel
+   * que cobra a data.
+   */
+  function mudaStatus(novo: TaskStatus) {
+    mover.mutate(
+      { taskId, dados: { status: novo, apos: null } },
+      {
+        onError: (erro) => {
+          if (erroDePrazoObrigatorio(erro)) setStatusPendente(novo);
+        },
+      },
+    );
   }
 
   const campo =
@@ -142,26 +169,49 @@ export function DetalheDaTarefa({
             className={`${campo} resize-y`}
           />
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-xs font-black tracking-wide text-texto-suave uppercase">
-              Prioridade
-            </span>
-            <select
-              value={priority}
-              onChange={(e) => {
-                const nova = e.target.value as TaskPriority;
-                setPriority(nova);
-                atualizar.mutate({ priority: nova });
-              }}
-              className={campo}
-            >
-              {ORDEM_PRIORIDADE.map((p) => (
-                <option key={p} value={p}>
-                  {ROTULO_PRIORIDADE[p]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-wrap gap-3">
+            {/* Subtarefa aninhada nao e arrastavel; sem este seletor ela nunca
+                sairia de "Pendente". Serve tambem para quem prefere nao
+                arrastar no board. */}
+            <label className="flex min-w-40 flex-1 flex-col gap-1.5 text-sm">
+              <span className="text-xs font-black tracking-wide text-texto-suave uppercase">
+                Status
+              </span>
+              <select
+                value={tarefa.status}
+                onChange={(e) => mudaStatus(e.target.value as TaskStatus)}
+                disabled={mover.isPending}
+                className={campo}
+              >
+                {ORDEM_STATUS.map((s) => (
+                  <option key={s} value={s}>
+                    {ROTULO_STATUS[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex min-w-40 flex-1 flex-col gap-1.5 text-sm">
+              <span className="text-xs font-black tracking-wide text-texto-suave uppercase">
+                Prioridade
+              </span>
+              <select
+                value={priority}
+                onChange={(e) => {
+                  const nova = e.target.value as TaskPriority;
+                  setPriority(nova);
+                  atualizar.mutate({ priority: nova });
+                }}
+                className={campo}
+              >
+                {ORDEM_PRIORIDADE.map((p) => (
+                  <option key={p} value={p}>
+                    {ROTULO_PRIORIDADE[p]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <fieldset className="flex flex-col gap-1.5 text-sm">
             <legend className="text-xs font-black tracking-wide text-texto-suave uppercase">
@@ -250,6 +300,19 @@ export function DetalheDaTarefa({
           </div>
         </div>
       </Dialogo>
+
+      {statusPendente && (
+        <PainelDePrazo
+          onDefinir={(due_date) =>
+            mover.mutate(
+              { taskId, dados: { status: statusPendente, due_date, apos: null } },
+              { onSuccess: () => setStatusPendente(null) },
+            )
+          }
+          onCancelar={() => setStatusPendente(null)}
+          erro={mover.error instanceof ApiError ? mover.error : null}
+        />
+      )}
 
       <Confirmacao
         aberto={confirmandoExclusao}

@@ -538,6 +538,8 @@ export interface components {
             /** Responsaveis */
             responsaveis: components["schemas"]["UsuarioPublico"][];
             status: components["schemas"]["TaskStatus"];
+            /** Subtarefas */
+            subtarefas: components["schemas"]["TarefaResumo"][];
             /** Subtarefas Concluidas */
             subtarefas_concluidas: number;
             /**

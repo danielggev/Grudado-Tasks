@@ -65,6 +65,15 @@ class TarefaResumo(BaseModel):
     total_de_subtarefas: int
     subtarefas_concluidas: int
 
+    # As subtarefas viajam junto porque o board as desenha aninhadas sob a mae.
+    # A profundidade e de um nivel, entao a auto-referencia nao recursa: numa
+    # subtarefa esta lista vem sempre vazia.
+    #
+    # Sem valor padrao de proposito: com `default_factory` o campo sairia como
+    # opcional no OpenAPI, e o TypeScript gerado obrigaria a checar `undefined`
+    # num dado que a API sempre envia.
+    subtarefas: list["TarefaResumo"]
+
 
 class TarefaDetalhe(TarefaResumo):
     description: str | None
@@ -72,7 +81,6 @@ class TarefaDetalhe(TarefaResumo):
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
-    subtarefas: list[TarefaResumo]
 
 
 class EventoDeAtividade(BaseModel):

@@ -28,6 +28,13 @@ export const FAIXA_PRIORIDADE: Record<TaskPriority, string> = {
 
 export const ORDEM_PRIORIDADE: TaskPriority[] = ["urgente", "alta", "normal", "baixa"];
 
+export const ORDEM_STATUS: TaskStatus[] = [
+  "a_fazer",
+  "em_andamento",
+  "bloqueado",
+  "concluido",
+];
+
 export const ROTULO_STATUS: Record<TaskStatus, string> = {
   a_fazer: "Pendente",
   em_andamento: "Em progresso",

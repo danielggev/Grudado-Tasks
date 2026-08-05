@@ -44,11 +44,7 @@ export function ColunaDoBoard({
           strategy={verticalListSortingStrategy}
         >
           {tarefas.map((tarefa) => (
-            <CartaoDeTarefa
-              key={tarefa.id}
-              tarefa={tarefa}
-              aoAbrir={() => aoAbrirTarefa(tarefa.id)}
-            />
+            <CartaoDeTarefa key={tarefa.id} tarefa={tarefa} aoAbrir={aoAbrirTarefa} />
           ))}
         </SortableContext>
 

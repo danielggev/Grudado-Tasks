@@ -119,7 +119,9 @@ def _resumo(tarefa: Task, *, filhas: Sequence[Task] = ()) -> TarefaResumo:
     """`filhas` e passado explicitamente porque subtarefa aninhada nao tem a
     propria colecao carregada -- acessa-la dispararia lazy load em contexto
     async, que estoura. Como a profundidade e de um nivel, subtarefa nunca
-    precisa das proprias filhas."""
+    precisa das proprias filhas, e a chamada recursiva abaixo sempre para no
+    primeiro nivel."""
+    ordenadas = sorted(filhas, key=lambda s: s.position)
     return TarefaResumo(
         id=tarefa.id,
         title=tarefa.title,
@@ -133,15 +135,15 @@ def _resumo(tarefa: Task, *, filhas: Sequence[Task] = ()) -> TarefaResumo:
             UsuarioPublico.model_validate(vinculo.user) for vinculo in tarefa.assignees
         ],
         e_do_time=e_tarefa_do_time(quantidade_de_responsaveis=len(tarefa.assignees)),
-        total_de_subtarefas=len(filhas),
+        total_de_subtarefas=len(ordenadas),
         subtarefas_concluidas=sum(
-            1 for filha in filhas if filha.status is TaskStatus.CONCLUIDO
+            1 for filha in ordenadas if filha.status is TaskStatus.CONCLUIDO
         ),
+        subtarefas=[_resumo(filha) for filha in ordenadas],
     )
 
 
 def _detalhe(tarefa: Task) -> TarefaDetalhe:
-    subtarefas = sorted(tarefa.subtasks, key=lambda s: s.position)
     return TarefaDetalhe(
         **_resumo(tarefa, filhas=tarefa.subtasks).model_dump(),
         description=tarefa.description,
@@ -153,7 +155,6 @@ def _detalhe(tarefa: Task) -> TarefaDetalhe:
         created_at=tarefa.created_at,
         updated_at=tarefa.updated_at,
         completed_at=tarefa.completed_at,
-        subtarefas=[_resumo(filha) for filha in subtarefas],
     )
 
 

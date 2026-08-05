@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import type { TarefaResumo } from "./api";
 import { CartaoDeTarefa } from "./CartaoDeTarefa";
@@ -18,8 +19,27 @@ function tarefa(extra: Partial<TarefaResumo> = {}): TarefaResumo {
     e_do_time: true,
     total_de_subtarefas: 0,
     subtarefas_concluidas: 0,
+    subtarefas: [],
     ...extra,
   };
+}
+
+/** Tarefa-mae com tres subtarefas, uma delas concluida. */
+function comSubtarefas(): TarefaResumo {
+  return tarefa({
+    total_de_subtarefas: 3,
+    subtarefas_concluidas: 1,
+    subtarefas: [
+      tarefa({ id: "sub-1", title: "Escolher fotos", parent_id: "t1" }),
+      tarefa({ id: "sub-2", title: "Revisar texto", parent_id: "t1" }),
+      tarefa({
+        id: "sub-3",
+        title: "Aprovar arte",
+        parent_id: "t1",
+        status: "concluido",
+      }),
+    ],
+  });
 }
 
 describe("CartaoDeTarefa", () => {
@@ -51,14 +71,35 @@ describe("CartaoDeTarefa", () => {
     expect(screen.getByText("Atrasada")).toBeInTheDocument();
   });
 
-  it("mostra o progresso das subtarefas", () => {
-    render(
-      <CartaoDeTarefa
-        tarefa={tarefa({ total_de_subtarefas: 3, subtarefas_concluidas: 1 })}
-        aoAbrir={() => {}}
-      />,
-    );
+  it("mostra o progresso das subtarefas e comeca recolhido", () => {
+    render(<CartaoDeTarefa tarefa={comSubtarefas()} aoAbrir={() => {}} />);
+
     expect(screen.getByText("1/3")).toBeInTheDocument();
+    // Recolhido por padrao: uma coluna cheia de tarefas quebradas em partes
+    // ficaria ilegivel se tudo abrisse de uma vez.
+    expect(screen.getByRole("button", { expanded: false })).toBeInTheDocument();
+    expect(screen.queryByText("Escolher fotos")).not.toBeInTheDocument();
+  });
+
+  it("revela as subtarefas ao expandir", async () => {
+    const usuario = userEvent.setup();
+    render(<CartaoDeTarefa tarefa={comSubtarefas()} aoAbrir={() => {}} />);
+
+    await usuario.click(screen.getByRole("button", { expanded: false }));
+
+    expect(screen.getByText("Escolher fotos")).toBeInTheDocument();
+    expect(screen.getByText("Revisar texto")).toBeInTheDocument();
+  });
+
+  it("abrir uma subtarefa avisa com o id dela, nao o da mae", async () => {
+    const usuario = userEvent.setup();
+    const aberta = vi.fn();
+    render(<CartaoDeTarefa tarefa={comSubtarefas()} aoAbrir={aberta} />);
+
+    await usuario.click(screen.getByRole("button", { expanded: false }));
+    await usuario.click(screen.getByText("Escolher fotos"));
+
+    expect(aberta).toHaveBeenCalledWith("sub-1");
   });
 
   it("nao mostra nada de prazo quando a tarefa nasceu sem", () => {

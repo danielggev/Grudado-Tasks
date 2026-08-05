@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Avatar } from "../../app/Layout";
@@ -68,10 +69,10 @@ export function ColunaDeTime({
       <div className="flex max-h-[26rem] flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
         {ordenadas.length > 0 ? (
           ordenadas.map((tarefa) => (
-            <MiniCartao
+            <ItemComSubtarefas
               key={tarefa.id}
               tarefa={tarefa}
-              aoAbrir={() => aoAbrirTarefa(tarefa.id)}
+              aoAbrirTarefa={aoAbrirTarefa}
             />
           ))
         ) : (
@@ -138,12 +139,6 @@ function MiniCartao({ tarefa, aoAbrir }: { tarefa: TarefaResumo; aoAbrir: () => 
             : "Sem prazo"}
         </span>
 
-        {tarefa.total_de_subtarefas > 0 && (
-          <span className="text-[10px] font-semibold text-texto-suave">
-            {tarefa.subtarefas_concluidas}/{tarefa.total_de_subtarefas}
-          </span>
-        )}
-
         <span className="ml-auto flex items-center">
           {tarefa.e_do_time ? (
             <span className="rounded-full bg-amarelo/25 px-1.5 py-0.5 text-[9px] font-semibold text-texto-suave">
@@ -161,6 +156,66 @@ function MiniCartao({ tarefa, aoAbrir }: { tarefa: TarefaResumo; aoAbrir: () => 
         </span>
       </div>
     </button>
+  );
+}
+
+/** Tarefa com as subtarefas presas a ela, como no board. */
+function ItemComSubtarefas({
+  tarefa,
+  aoAbrirTarefa,
+}: {
+  tarefa: TarefaResumo;
+  aoAbrirTarefa: (taskId: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+
+  return (
+    <div>
+      <MiniCartao tarefa={tarefa} aoAbrir={() => aoAbrirTarefa(tarefa.id)} />
+
+      {tarefa.subtarefas.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            className="mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-semibold text-texto-suave transition hover:bg-superficie-2 hover:text-texto"
+          >
+            <svg
+              width="9"
+              height="9"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              className={`transition-transform duration-200 ${aberto ? "rotate-90" : ""}`}
+            >
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {tarefa.subtarefas.length}{" "}
+            {tarefa.subtarefas.length === 1 ? "subtarefa" : "subtarefas"}
+            <span className="ml-auto">
+              {tarefa.subtarefas_concluidas}/{tarefa.total_de_subtarefas}
+            </span>
+          </button>
+
+          {aberto && (
+            <ul className="mt-1 flex flex-col gap-1 border-l-2 border-borda pl-2">
+              {tarefa.subtarefas.map((sub) => (
+                <li key={sub.id}>
+                  <MiniCartao tarefa={sub} aoAbrir={() => aoAbrirTarefa(sub.id)} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
