@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { Aviso } from "../../components/ui/Aviso";
 import { Botao } from "../../components/ui/Botao";
+import { BoardDoTime } from "../tasks/BoardDoTime";
 import { GestaoDeMembros } from "./GestaoDeMembros";
 import { useArquivarTime, useAtualizarTime, usePermissoes, useTime } from "./hooks";
 
@@ -30,20 +31,32 @@ export function DetalheDoTime() {
   const gerencia = podeGerenciar(time.id);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link to="/times" className="text-sm text-texto-suave hover:underline">
-        &larr; Times
-      </Link>
+    <div>
+      <div className="mx-auto max-w-3xl">
+        <Link to="/times" className="text-sm text-texto-suave hover:underline">
+          &larr; Times
+        </Link>
 
-      <Cabecalho time={time} podeGerenciar={gerencia} />
+        <Cabecalho time={time} podeGerenciar={gerencia} />
 
-      {arquivado && (
-        <p className="mt-4 rounded-lg border border-borda bg-superficie-2 px-3 py-2 text-sm text-texto-suave">
-          Este time esta arquivado. Reative-o para voltar a edita-lo.
-        </p>
+        {arquivado && (
+          <p className="mt-4 rounded-lg border border-borda bg-superficie-2 px-3 py-2 text-sm text-texto-suave">
+            Este time esta arquivado. Reative-o para voltar a edita-lo.
+          </p>
+        )}
+      </div>
+
+      {/* O board precisa de mais largura que o restante da tela: 4 colunas
+          de card nao cabem no mesmo max-w-3xl do cabecalho e dos membros. */}
+      {!arquivado && (
+        <div className="mt-8">
+          <BoardDoTime teamId={time.id} />
+        </div>
       )}
 
-      <GestaoDeMembros time={time} podeGerenciar={gerencia} />
+      <div className="mx-auto max-w-3xl">
+        <GestaoDeMembros time={time} podeGerenciar={gerencia} />
+      </div>
     </div>
   );
 }
