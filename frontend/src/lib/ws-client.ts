@@ -1,6 +1,7 @@
 export type EventoDoServidor =
   | { tipo: "tarefas_mudaram"; team_id: string }
   | { tipo: "time_mudou"; team_id: string }
+  | { tipo: "mensagens_mudaram"; team_id: string }
   | { tipo: "ping" };
 
 const RECONEXAO_INICIAL_MS = 1_000;

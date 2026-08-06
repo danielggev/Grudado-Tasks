@@ -11,6 +11,7 @@ import {
   MenuSuspenso,
   SeparadorDeMenu,
 } from "../../components/ui/MenuSuspenso";
+import { ChatDoTime } from "../chat/ChatDoTime";
 import { Board } from "../tasks/Board";
 import { DetalheDaTarefa } from "../tasks/DetalheDaTarefa";
 import { DialogoDeTarefa } from "../tasks/DialogoDeTarefa";
@@ -221,24 +222,36 @@ export function DetalheDoTime() {
         </div>
       </header>
 
-      <div className="mt-5 flex-1">
-        {visao === "board" ? (
-          <Board
-            tarefas={tarefas}
-            carregando={carregandoTarefas}
-            erro={erroTarefas}
-            chaveOtimista={chaveDoBoard(time.id)}
-            aoAbrirTarefa={setTarefaAberta}
-          />
-        ) : (
-          <ListaDoTime
-            tarefas={tarefas}
-            carregando={carregandoTarefas}
-            erro={erroTarefas}
-            teamId={time.id}
-            aoAbrirTarefa={setTarefaAberta}
-          />
-        )}
+      {/* 60/40 em telas largas. Abaixo de `lg` as duas metades empilham: lado
+          a lado num monitor estreito, o board caberia em uma coluna e meia e a
+          conversa ficaria com largura de tira. */}
+      <div className="mt-5 grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_2fr]">
+        <div className="min-w-0">
+          {visao === "board" ? (
+            <Board
+              tarefas={tarefas}
+              carregando={carregandoTarefas}
+              erro={erroTarefas}
+              chaveOtimista={chaveDoBoard(time.id)}
+              aoAbrirTarefa={setTarefaAberta}
+            />
+          ) : (
+            <ListaDoTime
+              tarefas={tarefas}
+              carregando={carregandoTarefas}
+              erro={erroTarefas}
+              teamId={time.id}
+              aoAbrirTarefa={setTarefaAberta}
+            />
+          )}
+        </div>
+
+        {/* Altura fixa em vez de esticar com o board: a conversa precisa de um
+            limite proprio para rolar por dentro, senao a pagina inteira e que
+            rolaria e o campo de escrever sumiria do alcance. */}
+        <div className="min-h-96 lg:h-[calc(100vh-13rem)]">
+          <ChatDoTime teamId={time.id} podeModerar={gerencia} />
+        </div>
       </div>
 
       {/* --- Paineis de gestao, todos abertos pela engrenagem --- */}

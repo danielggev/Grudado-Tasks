@@ -144,6 +144,46 @@ class TaskAssignee(Base):
     user: Mapped[User] = relationship()
 
 
+class Message(Base):
+    """Mensagem do chat do time.
+
+    Sem `updated_at` porque nao ha edicao: mensagem de chat que muda depois de
+    lida confunde mais do que ajuda. Para corrigir, apaga-se e envia de novo --
+    e a exclusao e explicita, com a lacuna visivel.
+    """
+
+    __tablename__ = "messages"
+    __table_args__ = (
+        # A conversa e sempre lida do fim para o inicio, por time.
+        Index("ix_messages_team_created", "team_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+
+    # RESTRICT como em tasks.created_by: quem tem conteudo no sistema e
+    # desativado, nao apagado.
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+
+    body: Mapped[str] = mapped_column(Text)
+
+    # Exclusao logica: apagar de vez reordenaria a conversa e deixaria quem
+    # estava lendo sem referencia do que sumiu.
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    # clock_timestamp() e nao now(): no Postgres, now() e o horario de INICIO da
+    # transacao, igual para todos os inserts dela. Numa conversa isso significa
+    # mensagens com o mesmo carimbo e ordem indefinida. clock_timestamp() marca
+    # o instante real de cada linha.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+
+    author: Mapped[User] = relationship()
+
+
 class ActivityLog(Base):
     """Historico de quem fez o que.
 

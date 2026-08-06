@@ -13,6 +13,7 @@ from uuid import UUID
 class TipoDeEvento(StrEnum):
     TAREFAS_MUDARAM = "tarefas_mudaram"
     TIME_MUDOU = "time_mudou"
+    MENSAGENS_MUDARAM = "mensagens_mudaram"
 
 
 @dataclass(frozen=True)

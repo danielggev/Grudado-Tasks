@@ -297,6 +297,50 @@ export interface paths {
         patch: operations["alterar_papel_do_membro"];
         trace?: never;
     };
+    "/api/v1/times/{team_id}/mensagens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar Mensagens
+         * @description Conversa do time. Sem `antes_de`, devolve o trecho mais recente.
+         */
+        get: operations["listar_mensagens"];
+        put?: never;
+        /** Enviar Mensagem */
+        post: operations["enviar_mensagem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/mensagens/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Excluir Mensagem
+         * @description Devolve a mensagem já marcada como excluída, em vez de 204.
+         *
+         *     O cliente precisa do registro para manter a lacuna na conversa -- some-la
+         *     da lista reordenaria tudo abaixo dela.
+         */
+        delete: operations["excluir_mensagem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/times/{team_id}/reativar": {
         parameters: {
             query?: never;
@@ -416,6 +460,29 @@ export interface components {
             role: components["schemas"]["TeamRole"];
             usuario: components["schemas"]["UsuarioPublico"];
         };
+        /** Mensagem */
+        Mensagem: {
+            autor: components["schemas"]["UsuarioPublico"];
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excluida */
+            excluida: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** MensagemCriar */
+        MensagemCriar: {
+            /** Body */
+            body: string;
+        };
         /**
          * MoverTarefa
          * @description Um gesto de arrastar: coluna de destino e onde soltou dentro dela.
@@ -433,6 +500,17 @@ export interface components {
          * @enum {string}
          */
         OrgRole: "admin" | "member";
+        /**
+         * PaginaDeMensagens
+         * @description As mensagens vem em ordem cronologica; `cursor` aponta para o trecho
+         *     anterior a elas, ou e nulo quando o inicio da conversa foi alcancado.
+         */
+        PaginaDeMensagens: {
+            /** Cursor */
+            cursor: string | null;
+            /** Mensagens */
+            mensagens: components["schemas"]["Mensagem"][];
+        };
         /**
          * TarefaAtualizar
          * @description Campos omitidos ficam como estao (o servico usa `exclude_unset`).
@@ -1407,6 +1485,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MembroDoTime"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_mensagens: {
+        parameters: {
+            query?: {
+                antes_de?: string | null;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaDeMensagens"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_mensagem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MensagemCriar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensagem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    excluir_mensagem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                message_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensagem"];
                 };
             };
             /** @description Validation Error */

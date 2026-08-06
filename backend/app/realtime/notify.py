@@ -24,3 +24,7 @@ def notifica_tarefas(background: BackgroundTasks, team_id: UUID) -> None:
 
 def notifica_time(background: BackgroundTasks, team_id: UUID) -> None:
     background.add_task(_publica, TipoDeEvento.TIME_MUDOU, team_id)
+
+
+def notifica_mensagens(background: BackgroundTasks, team_id: UUID) -> None:
+    background.add_task(_publica, TipoDeEvento.MENSAGENS_MUDARAM, team_id)
