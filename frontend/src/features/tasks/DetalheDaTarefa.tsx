@@ -11,6 +11,7 @@ import { useTime } from "../teams/hooks";
 import type { TaskPriority, TaskStatus } from "./api";
 import { BandeiraDePrioridade } from "./BandeiraDePrioridade";
 import {
+  chaveDoBoard,
   erroDePrazoObrigatorio,
   useAtualizarTarefa,
   useExcluirTarefa,
@@ -58,7 +59,9 @@ export function DetalheDaTarefa({
   const [responsaveis, setResponsaveis] = useState<string[]>([]);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [statusPendente, setStatusPendente] = useState<TaskStatus | null>(null);
-  const mover = useMoverTarefa(tarefa?.team_id ?? "");
+  // O detalhe abre a partir de qualquer tela, entao o cache a atualizar
+  // otimisticamente e o do board do time da tarefa.
+  const mover = useMoverTarefa(chaveDoBoard(tarefa?.team_id ?? ""));
 
   // Sincroniza o formulario sempre que a tarefa (re)carrega -- inclusive apos
   // outra pessoa move-la pelo board, o que invalida a query e traz dado novo.
@@ -111,8 +114,9 @@ export function DetalheDaTarefa({
    * que cobra a data.
    */
   function mudaStatus(novo: TaskStatus) {
+    if (!tarefa) return;
     mover.mutate(
-      { taskId, dados: { status: novo, apos: null } },
+      { taskId, teamId: tarefa.team_id, dados: { status: novo, apos: null } },
       {
         onError: (erro) => {
           if (erroDePrazoObrigatorio(erro)) setStatusPendente(novo);
@@ -319,7 +323,11 @@ export function DetalheDaTarefa({
         <PainelDePrazo
           onDefinir={(due_date) =>
             mover.mutate(
-              { taskId, dados: { status: statusPendente, due_date, apos: null } },
+              {
+                taskId,
+                teamId: tarefa.team_id,
+                dados: { status: statusPendente, due_date, apos: null },
+              },
               { onSuccess: () => setStatusPendente(null) },
             )
           }

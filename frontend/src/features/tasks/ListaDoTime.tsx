@@ -4,8 +4,7 @@ import { Aviso } from "../../components/ui/Aviso";
 import { EstadoVazio } from "../../components/ui/EstadoVazio";
 import { EsqueletoDeLinha } from "../../components/ui/Esqueleto";
 import { useTime } from "../teams/hooks";
-import type { TaskPriority, TaskStatus } from "./api";
-import { useBoard } from "./hooks";
+import type { TarefaResumo, TaskPriority, TaskStatus } from "./api";
 import { LinhaDeTarefa } from "./LinhaDeTarefa";
 import {
   ORDEM_PRIORIDADE,
@@ -22,14 +21,21 @@ import {
  * esta tela.
  */
 export function ListaDoTime({
+  tarefas,
+  carregando,
+  erro,
   teamId,
   aoAbrirTarefa,
 }: {
-  teamId: string;
+  tarefas: TarefaResumo[] | undefined;
+  carregando: boolean;
+  erro: unknown;
+  /** Ausente em "minhas tarefas", que mistura times -- ali nao ha por quem
+      filtrar, entao o seletor de responsavel some. */
+  teamId?: string;
   aoAbrirTarefa: (taskId: string) => void;
 }) {
-  const { data: tarefas, isPending, error } = useBoard(teamId);
-  const { data: time } = useTime(teamId);
+  const { data: time } = useTime(teamId ?? "");
 
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<TaskStatus | "">("");
@@ -62,7 +68,7 @@ export function ListaDoTime({
     setResponsavel("");
   }
 
-  if (isPending) {
+  if (carregando) {
     return (
       <div className="divide-y divide-borda rounded-card border border-borda bg-superficie">
         {Array.from({ length: 5 }, (_, i) => (
@@ -71,7 +77,7 @@ export function ListaDoTime({
       </div>
     );
   }
-  if (error) return <Aviso erro={error} />;
+  if (erro) return <Aviso erro={erro} />;
 
   const seletor =
     "rounded-full border border-borda bg-superficie px-3 py-1.5 text-xs font-semibold outline-none transition focus:border-azul-claro";
@@ -128,20 +134,22 @@ export function ListaDoTime({
           ))}
         </select>
 
-        <select
-          value={responsavel}
-          onChange={(e) => setResponsavel(e.target.value)}
-          aria-label="Filtrar por responsável"
-          className={seletor}
-        >
-          <option value="">Todos os responsáveis</option>
-          <option value="time">Tarefas do time (sem dono)</option>
-          {time?.membros.map((m) => (
-            <option key={m.usuario.id} value={m.usuario.id}>
-              {m.usuario.name}
-            </option>
-          ))}
-        </select>
+        {teamId && (
+          <select
+            value={responsavel}
+            onChange={(e) => setResponsavel(e.target.value)}
+            aria-label="Filtrar por responsável"
+            className={seletor}
+          >
+            <option value="">Todos os responsáveis</option>
+            <option value="time">Tarefas do time (sem dono)</option>
+            {time?.membros.map((m) => (
+              <option key={m.usuario.id} value={m.usuario.id}>
+                {m.usuario.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         {temFiltro && (
           <button

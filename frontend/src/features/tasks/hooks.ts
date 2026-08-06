@@ -20,9 +20,10 @@ import {
 } from "./api";
 
 const CHAVE_TAREFAS = ["tarefas"] as const;
-const chaveDoBoard = (teamId: string) => [...CHAVE_TAREFAS, "board", teamId] as const;
+export const chaveDoBoard = (teamId: string) =>
+  [...CHAVE_TAREFAS, "board", teamId] as const;
 const chaveDaTarefa = (taskId: string) => [...CHAVE_TAREFAS, taskId] as const;
-const CHAVE_MINHAS = [...CHAVE_TAREFAS, "minhas"] as const;
+export const CHAVE_MINHAS = [...CHAVE_TAREFAS, "minhas"] as const;
 const chaveDeAtividade = (taskId: string) => [...chaveDaTarefa(taskId), "atividade"] as const;
 
 export function useBoard(teamId: string) {
@@ -102,19 +103,29 @@ export function useExcluirTarefa(teamId: string) {
  * desfazer a atualizacao otimista, o card ficaria preso numa coluna que o
  * servidor recusou.
  */
-export function useMoverTarefa(teamId: string) {
+export type VariaveisDeMover = {
+  taskId: string;
+  /** Time da tarefa; usado para invalidar o board certo depois. */
+  teamId: string;
+  dados: MoverTarefa;
+};
+
+/**
+ * `chaveOtimista` e a lista que a tela esta exibindo -- o board de um time ou
+ * "minhas tarefas". Precisa ser parametro porque a mesma acao de arrastar
+ * acontece nas duas telas, e cada uma tem a propria copia em cache.
+ */
+export function useMoverTarefa(chaveOtimista: readonly unknown[]) {
   const queryClient = useQueryClient();
-  const chave = chaveDoBoard(teamId);
 
   return useMutation({
-    mutationFn: ({ taskId, dados }: { taskId: string; dados: MoverTarefa }) =>
-      moveTarefa(taskId, dados),
+    mutationFn: ({ taskId, dados }: VariaveisDeMover) => moveTarefa(taskId, dados),
 
     onMutate: async ({ taskId, dados }) => {
-      await queryClient.cancelQueries({ queryKey: chave });
-      const anterior = queryClient.getQueryData<TarefaResumo[]>(chave);
+      await queryClient.cancelQueries({ queryKey: chaveOtimista });
+      const anterior = queryClient.getQueryData<TarefaResumo[]>(chaveOtimista);
 
-      queryClient.setQueryData<TarefaResumo[]>(chave, (atual) =>
+      queryClient.setQueryData<TarefaResumo[]>(chaveOtimista, (atual) =>
         atual?.map((tarefa) =>
           tarefa.id === taskId
             ? { ...tarefa, status: dados.status, due_date: dados.due_date ?? tarefa.due_date }
@@ -126,13 +137,14 @@ export function useMoverTarefa(teamId: string) {
     },
 
     onError: (_erro, _variaveis, contexto) => {
-      if (contexto?.anterior) queryClient.setQueryData(chave, contexto.anterior);
+      if (contexto?.anterior) queryClient.setQueryData(chaveOtimista, contexto.anterior);
     },
 
     // Sempre resincroniza com o servidor: o otimista acerta status e prazo,
     // mas a posicao fracionaria final e calculada no backend.
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: chave });
+    onSettled: (_dados, _erro, variaveis) => {
+      void queryClient.invalidateQueries({ queryKey: chaveOtimista });
+      void queryClient.invalidateQueries({ queryKey: chaveDoBoard(variaveis.teamId) });
       void queryClient.invalidateQueries({ queryKey: CHAVE_MINHAS });
       void queryClient.invalidateQueries({ queryKey: CHAVE_PANORAMA });
     },

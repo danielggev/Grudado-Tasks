@@ -14,7 +14,7 @@ import {
 import { Board } from "../tasks/Board";
 import { DetalheDaTarefa } from "../tasks/DetalheDaTarefa";
 import { DialogoDeTarefa } from "../tasks/DialogoDeTarefa";
-import { useSincronizacaoDoTime } from "../tasks/hooks";
+import { chaveDoBoard, useBoard, useSincronizacaoDoTime } from "../tasks/hooks";
 import { ListaDoTime } from "../tasks/ListaDoTime";
 import { DialogoEditarTime } from "./DialogoEditarTime";
 import { DialogoExcluirTime } from "./DialogoExcluirTime";
@@ -47,6 +47,11 @@ export function DetalheDoTime() {
   );
 
   const arquivar = useArquivarTime(teamId);
+  const {
+    data: tarefas,
+    isPending: carregandoTarefas,
+    error: erroTarefas,
+  } = useBoard(teamId);
 
   if (isPending) {
     return (
@@ -218,9 +223,21 @@ export function DetalheDoTime() {
 
       <div className="mt-5 flex-1">
         {visao === "board" ? (
-          <Board teamId={time.id} aoAbrirTarefa={setTarefaAberta} />
+          <Board
+            tarefas={tarefas}
+            carregando={carregandoTarefas}
+            erro={erroTarefas}
+            chaveOtimista={chaveDoBoard(time.id)}
+            aoAbrirTarefa={setTarefaAberta}
+          />
         ) : (
-          <ListaDoTime teamId={time.id} aoAbrirTarefa={setTarefaAberta} />
+          <ListaDoTime
+            tarefas={tarefas}
+            carregando={carregandoTarefas}
+            erro={erroTarefas}
+            teamId={time.id}
+            aoAbrirTarefa={setTarefaAberta}
+          />
         )}
       </div>
 

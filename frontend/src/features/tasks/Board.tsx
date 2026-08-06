@@ -11,23 +11,36 @@ import { useState } from "react";
 import { Aviso } from "../../components/ui/Aviso";
 import { EsqueletoDeCartao } from "../../components/ui/Esqueleto";
 import { ApiError } from "../../lib/api-client";
-import type { TaskStatus } from "./api";
+import type { TarefaResumo, TaskStatus } from "./api";
 import { ColunaDoBoard } from "./ColunaDoBoard";
-import { erroDePrazoObrigatorio, useBoard, useMoverTarefa } from "./hooks";
+import { erroDePrazoObrigatorio, useMoverTarefa } from "./hooks";
 import { PainelDePrazo } from "./PainelDePrazo";
 import { COR_STATUS, ORDEM_STATUS, ROTULO_STATUS } from "./prioridade";
 
 const COLUNAS: TaskStatus[] = ORDEM_STATUS;
 
+/**
+ * O quadro em si, sem saber de onde vem as tarefas.
+ *
+ * A lista chega pronta e `chaveOtimista` diz qual cache atualizar ao arrastar.
+ * E o que permite ao board do time e a "minhas tarefas" compartilharem o mesmo
+ * componente -- inclusive o arrasto, que em "minhas tarefas" move cards de
+ * times diferentes na mesma coluna.
+ */
 export function Board({
-  teamId,
+  tarefas,
+  carregando,
+  erro,
+  chaveOtimista,
   aoAbrirTarefa,
 }: {
-  teamId: string;
+  tarefas: TarefaResumo[] | undefined;
+  carregando: boolean;
+  erro: unknown;
+  chaveOtimista: readonly unknown[];
   aoAbrirTarefa: (taskId: string) => void;
 }) {
-  const { data: tarefas, isPending, error } = useBoard(teamId);
-  const mover = useMoverTarefa(teamId);
+  const mover = useMoverTarefa(chaveOtimista);
 
   // Quando o backend recusa por falta de prazo, a tarefa fica pendente aqui
   // ate o usuario informar a data ou desistir -- o card ja "voltou" ao lugar
@@ -35,6 +48,7 @@ export function Board({
   // enquanto o painel espera resposta.
   const [pendenteDePrazo, setPendenteDePrazo] = useState<{
     taskId: string;
+    teamId: string;
     status: TaskStatus;
   } | null>(null);
 
@@ -42,21 +56,11 @@ export function Board({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  if (isPending) return <BoardCarregando />;
-  if (error) return <Aviso erro={error} />;
+  if (carregando) return <BoardCarregando />;
+  if (erro) return <Aviso erro={erro} />;
 
-  const porStatus = (status: TaskStatus) => (tarefas ?? []).filter((t) => t.status === status);
-
-  function moveComTratamentoDePrazo(taskId: string, status: TaskStatus, apos?: string) {
-    mover.mutate(
-      { taskId, dados: { status, apos: apos ?? null } },
-      {
-        onError: (erro: unknown) => {
-          if (erroDePrazoObrigatorio(erro)) setPendenteDePrazo({ taskId, status });
-        },
-      },
-    );
-  }
+  const porStatus = (status: TaskStatus) =>
+    (tarefas ?? []).filter((t) => t.status === status);
 
   function aoTerminarArrasto(evento: DragEndEvent) {
     const { active, over } = evento;
@@ -75,13 +79,35 @@ export function Board({
     if (!statusDestino) return;
     if (statusDestino === tarefaArrastada.status && active.id === over.id) return;
 
-    const apos = alvoEhColuna ? undefined : (over.id as string);
-    moveComTratamentoDePrazo(active.id as string, statusDestino, apos);
+    const apos = alvoEhColuna ? null : (over.id as string);
+
+    mover.mutate(
+      {
+        taskId: tarefaArrastada.id,
+        teamId: tarefaArrastada.team_id,
+        dados: { status: statusDestino, apos },
+      },
+      {
+        onError: (erroDoMover: unknown) => {
+          if (erroDePrazoObrigatorio(erroDoMover)) {
+            setPendenteDePrazo({
+              taskId: tarefaArrastada.id,
+              teamId: tarefaArrastada.team_id,
+              status: statusDestino,
+            });
+          }
+        },
+      },
+    );
   }
 
   return (
     <>
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={aoTerminarArrasto}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={aoTerminarArrasto}
+      >
         <div className="flex gap-3 overflow-x-auto pb-3">
           {COLUNAS.map((status) => (
             <ColunaDoBoard
@@ -100,6 +126,7 @@ export function Board({
             mover.mutate(
               {
                 taskId: pendenteDePrazo.taskId,
+                teamId: pendenteDePrazo.teamId,
                 dados: { status: pendenteDePrazo.status, due_date, apos: null },
               },
               { onSuccess: () => setPendenteDePrazo(null) },
@@ -118,9 +145,15 @@ function BoardCarregando() {
   return (
     <div className="flex gap-3 overflow-x-auto pb-3">
       {COLUNAS.map((status, coluna) => (
-        <div key={status} className="flex w-76 shrink-0 flex-col rounded-card bg-superficie-2 p-2">
+        <div
+          key={status}
+          className="flex w-76 shrink-0 flex-col rounded-card bg-superficie-2 p-2"
+        >
           <div className="flex items-center gap-2 px-2 py-2">
-            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${COR_STATUS[status]}`} />
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 rounded-full ${COR_STATUS[status]}`}
+            />
             <h3 className="text-xs font-black tracking-wide text-texto uppercase">
               {ROTULO_STATUS[status]}
             </h3>
