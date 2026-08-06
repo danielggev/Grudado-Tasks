@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-
+import { MenuSuspenso } from "../../components/ui/MenuSuspenso";
 import type { TaskStatus } from "./api";
 import { COR_STATUS, ORDEM_STATUS, ROTULO_STATUS } from "./prioridade";
 
 /**
  * Filtro de status da coluna.
  *
- * Menu proprio em vez de <select> nativo porque o gatilho e so um icone --
- * um select estilizado assim perde a seta e vira um alvo de clique confuso.
- * Em troca, o teclado precisa ser tratado a mao: Esc fecha, e o foco volta
- * para o botao.
+ * A mecanica do menu (clique fora, Esc, devolucao de foco) vive no
+ * MenuSuspenso; aqui fica so o que e do filtro.
  */
 export function FiltroDeStatus({
   valor,
@@ -18,70 +15,26 @@ export function FiltroDeStatus({
   valor: TaskStatus | null;
   aoMudar: (status: TaskStatus | null) => void;
 }) {
-  const [aberto, setAberto] = useState(false);
-  const container = useRef<HTMLDivElement>(null);
-  const gatilho = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!aberto) return;
-
-    function cliqueFora(evento: MouseEvent) {
-      if (!container.current?.contains(evento.target as Node)) setAberto(false);
-    }
-    function tecla(evento: KeyboardEvent) {
-      if (evento.key !== "Escape") return;
-      setAberto(false);
-      // Devolve o foco: sem isso, fechar com Esc deixaria quem navega por
-      // teclado perdido no inicio da pagina.
-      gatilho.current?.focus();
-    }
-
-    document.addEventListener("mousedown", cliqueFora);
-    document.addEventListener("keydown", tecla);
-    return () => {
-      document.removeEventListener("mousedown", cliqueFora);
-      document.removeEventListener("keydown", tecla);
-    };
-  }, [aberto]);
-
-  function escolhe(status: TaskStatus | null) {
-    aoMudar(status);
-    setAberto(false);
-    gatilho.current?.focus();
-  }
-
   const ativo = valor !== null;
 
   return (
-    <div ref={container} className="relative">
-      <button
-        ref={gatilho}
-        type="button"
-        onClick={() => setAberto((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={aberto}
-        aria-label={
-          ativo ? `Filtrando por ${ROTULO_STATUS[valor]}. Mudar filtro` : "Filtrar por status"
-        }
-        title={ativo ? `Filtrando: ${ROTULO_STATUS[valor]}` : "Filtrar por status"}
-        className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
-          ativo
-            ? "bg-azul-claro/15 text-azul-claro"
-            : "text-texto-suave hover:bg-superficie-2 hover:text-texto"
-        }`}
-      >
-        <IconeFunil />
-      </button>
-
-      {aberto && (
-        <div
-          role="menu"
-          className="absolute top-8 right-0 z-30 w-44 overflow-hidden rounded-xl border border-borda bg-superficie py-1 shadow-alta"
-        >
+    <MenuSuspenso
+      rotulo={
+        ativo ? `Filtrando por ${ROTULO_STATUS[valor]}. Mudar filtro` : "Filtrar por status"
+      }
+      icone={<IconeFunil />}
+      ativo={ativo}
+      largura="w-44"
+    >
+      {(fechar) => (
+        <>
           <Opcao
             rotulo="Todas"
             selecionada={valor === null}
-            aoEscolher={() => escolhe(null)}
+            aoEscolher={() => {
+              aoMudar(null);
+              fechar();
+            }}
           />
           {ORDEM_STATUS.map((status) => (
             <Opcao
@@ -89,12 +42,15 @@ export function FiltroDeStatus({
               rotulo={ROTULO_STATUS[status]}
               cor={COR_STATUS[status]}
               selecionada={valor === status}
-              aoEscolher={() => escolhe(status)}
+              aoEscolher={() => {
+                aoMudar(status);
+                fechar();
+              }}
             />
           ))}
-        </div>
+        </>
       )}
-    </div>
+    </MenuSuspenso>
   );
 }
 
@@ -119,11 +75,7 @@ function Opcao({
         selecionada ? "text-texto" : "text-texto-suave"
       }`}
     >
-      {cor ? (
-        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${cor}`} />
-      ) : (
-        <span aria-hidden="true" className="h-2 w-2 shrink-0" />
-      )}
+      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${cor ?? ""}`} />
       {rotulo}
       {selecionada && (
         <svg

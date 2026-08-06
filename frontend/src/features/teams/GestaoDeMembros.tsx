@@ -34,12 +34,8 @@ export function GestaoDeMembros({
     "rounded-full border border-borda bg-superficie px-3 py-1.5 text-xs font-semibold outline-none transition focus:border-azul-claro disabled:opacity-50";
 
   return (
-    <section className="mt-10">
-      <h2 className="text-xs font-black tracking-wide text-texto-suave uppercase">
-        Membros ({time.membros.length})
-      </h2>
-
-      <ul className="mt-3 divide-y divide-borda overflow-hidden rounded-card border border-borda bg-superficie shadow-suave">
+    <section>
+      <ul className="divide-y divide-borda overflow-hidden rounded-xl border border-borda">
         {time.membros.map((membro) => {
           // A regra do ultimo lead vive no backend; espelha-la aqui e so para
           // desabilitar o controle antes do erro, nunca como garantia.
@@ -104,7 +100,7 @@ export function GestaoDeMembros({
       </ul>
 
       {podeGerenciar && !arquivado && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <select
             value={selecionado}
             onChange={(e) => setSelecionado(e.target.value)}
