@@ -11,6 +11,7 @@ from app.domain.anexos import AnexoInvalido, ArquivoRecebido
 from app.domain.errors import RecursoNaoEncontrado
 from app.schemas.chat import MensagemCriar
 from app.services import chat_service
+from app.services.chat_service import Conversa
 from app.storage.arquivos import ArmazenamentoLocal, ArquivoNaoEncontrado
 from tests.conftest import (
     SEM_BANCO,
@@ -52,7 +53,7 @@ class TestEnvioComAnexo:
         mensagem = await chat_service.envia_mensagem(
             session,
             ctx,
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body="segue o print"),
             arquivos=[png()],
             armazenamento=armazenamento,
@@ -74,7 +75,7 @@ class TestEnvioComAnexo:
         mensagem = await chat_service.envia_mensagem(
             session,
             await contexto_de(session, lead),
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body=""),
             arquivos=[png("../../../etc/passwd.png")],
             armazenamento=armazenamento,
@@ -93,7 +94,7 @@ class TestEnvioComAnexo:
         mensagem = await chat_service.envia_mensagem(
             session,
             await contexto_de(session, lead),
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body=""),
             arquivos=[png()],
             armazenamento=armazenamento,
@@ -101,14 +102,15 @@ class TestEnvioComAnexo:
         assert mensagem.body == ""
         assert len(mensagem.anexos) == 1
 
-    async def test_mensagem_sem_texto_e_sem_anexo_e_recusada(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_mensagem_sem_texto_e_sem_anexo_e_recusada(self, session: AsyncSession) -> None:
         time, lead, _ = await cenario(session)
 
         with pytest.raises(chat_service.MensagemVazia):
             await chat_service.envia_mensagem(
-                session, await contexto_de(session, lead), time.id, MensagemCriar(body="   ")
+                session,
+                await contexto_de(session, lead),
+                Conversa.do_time(time.id),
+                MensagemCriar(body="   "),
             )
 
     async def test_arquivo_invalido_nao_deixa_mensagem_no_banco(
@@ -123,7 +125,7 @@ class TestEnvioComAnexo:
             await chat_service.envia_mensagem(
                 session,
                 ctx,
-                time.id,
+                Conversa.do_time(time.id),
                 MensagemCriar(body="tentativa"),
                 arquivos=[
                     ArquivoRecebido(
@@ -133,7 +135,7 @@ class TestEnvioComAnexo:
                 armazenamento=armazenamento,
             )
 
-        mensagens, _ = await chat_service.lista_mensagens(session, ctx, time.id)
+        mensagens, _ = await chat_service.lista_mensagens(session, ctx, Conversa.do_time(time.id))
         assert mensagens == []
 
 
@@ -145,14 +147,17 @@ class TestDownload:
         mensagem = await chat_service.envia_mensagem(
             session,
             await contexto_de(session, lead),
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body=""),
             arquivos=[png()],
             armazenamento=armazenamento,
         )
 
         anexo = await chat_service.obtem_anexo(
-            session, await contexto_de(session, membro), time.id, mensagem.anexos[0].id
+            session,
+            await contexto_de(session, membro),
+            Conversa.do_time(time.id),
+            mensagem.anexos[0].id,
         )
         assert await armazenamento.le(anexo.storage_key) == PNG
 
@@ -163,7 +168,7 @@ class TestDownload:
         mensagem = await chat_service.envia_mensagem(
             session,
             await contexto_de(session, lead),
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body=""),
             arquivos=[png()],
             armazenamento=armazenamento,
@@ -174,7 +179,7 @@ class TestDownload:
             await chat_service.obtem_anexo(
                 session,
                 await contexto_de(session, estranho),
-                time.id,
+                Conversa.do_time(time.id),
                 mensagem.anexos[0].id,
             )
 
@@ -189,14 +194,16 @@ class TestDownload:
         mensagem = await chat_service.envia_mensagem(
             session,
             ctx,
-            time.id,
+            Conversa.do_time(time.id),
             MensagemCriar(body=""),
             arquivos=[png()],
             armazenamento=armazenamento,
         )
 
         with pytest.raises(RecursoNaoEncontrado):
-            await chat_service.obtem_anexo(session, ctx, outro.id, mensagem.anexos[0].id)
+            await chat_service.obtem_anexo(
+                session, ctx, Conversa.do_time(outro.id), mensagem.anexos[0].id
+            )
 
 
 class TestArmazenamento:
@@ -207,11 +214,19 @@ class TestArmazenamento:
         ctx = await contexto_de(session, lead)
 
         primeira = await chat_service.envia_mensagem(
-            session, ctx, time.id, MensagemCriar(body=""), arquivos=[png()],
+            session,
+            ctx,
+            Conversa.do_time(time.id),
+            MensagemCriar(body=""),
+            arquivos=[png()],
             armazenamento=armazenamento,
         )
         segunda = await chat_service.envia_mensagem(
-            session, ctx, time.id, MensagemCriar(body=""), arquivos=[png()],
+            session,
+            ctx,
+            Conversa.do_time(time.id),
+            MensagemCriar(body=""),
+            arquivos=[png()],
             armazenamento=armazenamento,
         )
 
@@ -233,15 +248,19 @@ class TestArmazenamento:
         time, lead, _ = await cenario(session)
         ctx = await contexto_de(session, lead)
         mensagem = await chat_service.envia_mensagem(
-            session, ctx, time.id, MensagemCriar(body=""), arquivos=[png()],
+            session,
+            ctx,
+            Conversa.do_time(time.id),
+            MensagemCriar(body=""),
+            arquivos=[png()],
             armazenamento=armazenamento,
         )
 
-        await chat_service.exclui_mensagem(session, ctx, time.id, mensagem.id)
+        await chat_service.exclui_mensagem(session, ctx, Conversa.do_time(time.id), mensagem.id)
 
         ainda = (
-            await session.execute(
-                select(Attachment).where(Attachment.message_id == mensagem.id)
-            )
-        ).scalars().all()
+            (await session.execute(select(Attachment).where(Attachment.message_id == mensagem.id)))
+            .scalars()
+            .all()
+        )
         assert len(ainda) == 1

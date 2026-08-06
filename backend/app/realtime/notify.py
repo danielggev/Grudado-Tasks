@@ -14,8 +14,8 @@ from app.realtime.events import Evento, TipoDeEvento
 from app.realtime.hub import get_hub
 
 
-def _publica(tipo: TipoDeEvento, team_id: UUID) -> None:
-    get_hub().publica(Evento(tipo=tipo, team_id=team_id))
+def _publica(tipo: TipoDeEvento, team_id: UUID, task_id: UUID | None = None) -> None:
+    get_hub().publica(Evento(tipo=tipo, team_id=team_id, task_id=task_id))
 
 
 def notifica_tarefas(background: BackgroundTasks, team_id: UUID) -> None:
@@ -26,5 +26,7 @@ def notifica_time(background: BackgroundTasks, team_id: UUID) -> None:
     background.add_task(_publica, TipoDeEvento.TIME_MUDOU, team_id)
 
 
-def notifica_mensagens(background: BackgroundTasks, team_id: UUID) -> None:
-    background.add_task(_publica, TipoDeEvento.MENSAGENS_MUDARAM, team_id)
+def notifica_mensagens(
+    background: BackgroundTasks, team_id: UUID, *, task_id: UUID | None = None
+) -> None:
+    background.add_task(_publica, TipoDeEvento.MENSAGENS_MUDARAM, team_id, task_id)

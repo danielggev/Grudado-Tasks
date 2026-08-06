@@ -156,7 +156,15 @@ class TaskAssignee(Base):
 
 
 class Message(Base):
-    """Mensagem do chat do time.
+    """Mensagem de chat -- do time ou de uma tarefa.
+
+    As duas conversas sao a mesma coisa com escopo diferente, entao moram na
+    mesma tabela: `task_id` nulo e a conversa do time, preenchido e a da
+    tarefa. Duplicar em duas tabelas obrigaria a duplicar tambem anexo,
+    exclusao, permissao e tempo real.
+
+    `team_id` fica preenchido sempre, inclusive na conversa de tarefa: e por
+    ele que o controle de acesso decide, sem precisar de join com tasks.
 
     Sem `updated_at` porque nao ha edicao: mensagem de chat que muda depois de
     lida confunde mais do que ajuda. Para corrigir, apaga-se e envia de novo --
@@ -165,12 +173,17 @@ class Message(Base):
 
     __tablename__ = "messages"
     __table_args__ = (
-        # A conversa e sempre lida do fim para o inicio, por time.
-        Index("ix_messages_team_created", "team_id", "created_at"),
+        # Conversa do time: lida do fim para o inicio, filtrando as de tarefa.
+        Index("ix_messages_team_created", "team_id", "task_id", "created_at"),
+        # Conversa de uma tarefa especifica.
+        Index("ix_messages_task_created", "task_id", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    task_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"), default=None
+    )
 
     # RESTRICT como em tasks.created_by: quem tem conteudo no sistema e
     # desativado, nao apagado.

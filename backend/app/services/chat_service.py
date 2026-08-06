@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -31,10 +32,30 @@ class MensagemVazia(RegraDeDominioViolada):
         super().__init__("Escreva algo ou anexe um arquivo.", campo="body")
 
 
+@dataclass(frozen=True)
+class Conversa:
+    """Onde a mensagem vive: no time, ou numa tarefa dele.
+
+    `team_id` esta sempre presente, inclusive na conversa de tarefa -- e por
+    ele que o acesso e decidido, sem precisar consultar a tarefa de novo.
+    """
+
+    team_id: UUID
+    task_id: UUID | None = None
+
+    @classmethod
+    def do_time(cls, team_id: UUID) -> "Conversa":
+        return cls(team_id=team_id)
+
+    @classmethod
+    def da_tarefa(cls, team_id: UUID, task_id: UUID) -> "Conversa":
+        return cls(team_id=team_id, task_id=task_id)
+
+
 async def lista_mensagens(
     session: AsyncSession,
     ctx: ContextoDeAcesso,
-    team_id: UUID,
+    conversa: Conversa,
     *,
     antes_de: datetime | None = None,
 ) -> tuple[list[Message], datetime | None]:
@@ -47,11 +68,11 @@ async def lista_mensagens(
     Devolve tambem o proximo cursor, ou None quando o inicio foi alcancado --
     sem isso o cliente nao teria como saber quando parar de pedir mais.
     """
-    _exigir_acesso(ctx, team_id)
+    _exigir_acesso(ctx, conversa.team_id)
 
     stmt = (
         select(Message)
-        .where(Message.team_id == team_id)
+        .where(Message.team_id == conversa.team_id, Message.task_id == conversa.task_id)
         .options(selectinload(Message.author), selectinload(Message.anexos))
         # `id` como desempate: mesmo com clock_timestamp(), ordenar por coluna
         # nao unica deixaria a paginacao instavel se dois carimbos coincidissem.
@@ -74,13 +95,13 @@ async def lista_mensagens(
 async def envia_mensagem(
     session: AsyncSession,
     ctx: ContextoDeAcesso,
-    team_id: UUID,
+    conversa: Conversa,
     dados: MensagemCriar,
     *,
     arquivos: list[ArquivoRecebido] | None = None,
     armazenamento: ArmazenamentoDeArquivos | None = None,
 ) -> Message:
-    _exigir_acesso(ctx, team_id)
+    _exigir_acesso(ctx, conversa.team_id)
 
     recebidos = arquivos or []
     corpo = dados.body.strip()
@@ -91,7 +112,12 @@ async def envia_mensagem(
     # deixaria a pessoa sem saber o que subiu.
     valida_anexos(recebidos)
 
-    mensagem = Message(team_id=team_id, author_id=ctx.user_id, body=corpo)
+    mensagem = Message(
+        team_id=conversa.team_id,
+        task_id=conversa.task_id,
+        author_id=ctx.user_id,
+        body=corpo,
+    )
     session.add(mensagem)
     await session.flush()
 
@@ -149,22 +175,25 @@ def _nome_seguro(filename: str) -> str:
 
 
 async def exclui_mensagem(
-    session: AsyncSession, ctx: ContextoDeAcesso, team_id: UUID, message_id: UUID
+    session: AsyncSession, ctx: ContextoDeAcesso, conversa: Conversa, message_id: UUID
 ) -> Message:
     """Exclusao logica, restrita ao autor (ou ao lead e ao admin).
 
     O corpo e apagado de verdade -- manter o texto de uma mensagem que a pessoa
     pediu para remover so mudaria quem consegue ler, nao se ela existe.
     """
-    _exigir_acesso(ctx, team_id)
+    _exigir_acesso(ctx, conversa.team_id)
     mensagem = await _carrega(session, message_id)
 
-    if mensagem.team_id != team_id:
+    # Confere as duas pontas do escopo: sem checar `task_id`, o id de uma
+    # mensagem da conversa do time serviria para apagar por dentro da rota de
+    # uma tarefa, e vice-versa.
+    if mensagem.team_id != conversa.team_id or mensagem.task_id != conversa.task_id:
         raise MensagemNaoEncontrada()
 
     if mensagem.author_id != ctx.user_id:
         exigir(
-            ctx.e_admin or ctx.e_lead_de(team_id),
+            ctx.e_admin or ctx.e_lead_de(conversa.team_id),
             "Só quem escreveu pode apagar esta mensagem.",
         )
 
@@ -177,19 +206,23 @@ async def exclui_mensagem(
 
 
 async def obtem_anexo(
-    session: AsyncSession, ctx: ContextoDeAcesso, team_id: UUID, anexo_id: UUID
+    session: AsyncSession, ctx: ContextoDeAcesso, conversa: Conversa, anexo_id: UUID
 ) -> Attachment:
     """Anexo para download, so para quem tem acesso ao time.
 
     A checagem sobe pela mensagem ate o time: sem isso, quem descobrisse um id
     baixaria arquivo de qualquer conversa da empresa.
     """
-    _exigir_acesso(ctx, team_id)
+    _exigir_acesso(ctx, conversa.team_id)
 
     stmt = (
         select(Attachment)
         .join(Message, Message.id == Attachment.message_id)
-        .where(Attachment.id == anexo_id, Message.team_id == team_id)
+        .where(
+            Attachment.id == anexo_id,
+            Message.team_id == conversa.team_id,
+            Message.task_id == conversa.task_id,
+        )
     )
     anexo = (await session.execute(stmt)).scalar_one_or_none()
     if anexo is None:
@@ -224,6 +257,7 @@ __all__ = [
     "PAGINA",
     "AcessoNegado",
     "AnexoNaoEncontrado",
+    "Conversa",
     "MensagemNaoEncontrada",
     "MensagemVazia",
     "envia_mensagem",

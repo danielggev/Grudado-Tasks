@@ -185,6 +185,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tarefas/{task_id}/mensagens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar Mensagens Da Tarefa */
+        get: operations["listar_mensagens_da_tarefa"];
+        put?: never;
+        /** Enviar Mensagem Na Tarefa */
+        post: operations["enviar_mensagem_na_tarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/{task_id}/mensagens/anexos/{anexo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Baixar Anexo Da Tarefa */
+        get: operations["baixar_anexo_da_tarefa"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tarefas/{task_id}/mensagens/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Excluir Mensagem Da Tarefa */
+        delete: operations["excluir_mensagem_da_tarefa"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tarefas/{task_id}/mover": {
         parameters: {
             query?: never;
@@ -304,19 +356,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Listar Mensagens
-         * @description Conversa do time. Sem `antes_de`, devolve o trecho mais recente.
-         */
+        /** Listar Mensagens */
         get: operations["listar_mensagens"];
         put?: never;
-        /**
-         * Enviar Mensagem
-         * @description Envia mensagem com ou sem anexos.
-         *
-         *     Multipart sempre, mesmo para texto puro: um caminho so evita ter duas
-         *     rotas fazendo a mesma coisa com formatos diferentes.
-         */
+        /** Enviar Mensagem */
         post: operations["enviar_mensagem"];
         delete?: never;
         options?: never;
@@ -331,17 +374,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Baixar Anexo
-         * @description Serve o anexo, com os cabecalhos que impedem o arquivo de virar ataque.
-         *
-         *     - `nosniff`: sem ele o navegador pode ignorar o Content-Type declarado e
-         *       interpretar o conteudo, o que transformaria um "png" em HTML executavel.
-         *     - `inline` so para imagens da lista permitida; todo o resto e baixado, e
-         *       nao aberto na mesma origem da sessao.
-         *     - `Content-Security-Policy: sandbox` como ultima barreira, caso algum tipo
-         *       escape das duas regras acima.
-         */
+        /** Baixar Anexo */
         get: operations["baixar_anexo"];
         put?: never;
         post?: never;
@@ -361,13 +394,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Excluir Mensagem
-         * @description Devolve a mensagem já marcada como excluída, em vez de 204.
-         *
-         *     O cliente precisa do registro para manter a lacuna na conversa -- some-la
-         *     da lista reordenaria tudo abaixo dela.
-         */
+        /** Excluir Mensagem */
         delete: operations["excluir_mensagem"];
         options?: never;
         head?: never;
@@ -477,6 +504,19 @@ export interface components {
         };
         /** Body_enviar_mensagem */
         Body_enviar_mensagem: {
+            /**
+             * Arquivos
+             * @default []
+             */
+            arquivos: string[];
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+        };
+        /** Body_enviar_mensagem_na_tarefa */
+        Body_enviar_mensagem_na_tarefa: {
             /**
              * Arquivos
              * @default []
@@ -1198,6 +1238,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventoDeAtividade"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_mensagens_da_tarefa: {
+        parameters: {
+            query?: {
+                antes_de?: string | null;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaDeMensagens"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enviar_mensagem_na_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_enviar_mensagem_na_tarefa"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensagem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    baixar_anexo_da_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                anexo_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    excluir_mensagem_da_tarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                message_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mensagem"];
                 };
             };
             /** @description Validation Error */

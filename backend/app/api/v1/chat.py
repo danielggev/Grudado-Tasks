@@ -12,26 +12,34 @@ from app.domain.anexos import TAMANHO_MAXIMO, AnexoInvalido, ArquivoRecebido, e_
 from app.realtime.notify import notifica_mensagens
 from app.schemas.chat import Anexo, Mensagem, MensagemCriar, PaginaDeMensagens
 from app.schemas.user import UsuarioPublico
-from app.services import chat_service
+from app.services import chat_service, task_service
+from app.services.chat_service import Conversa
 
-router = APIRouter(prefix="/times/{team_id}/mensagens", tags=["chat"])
+router = APIRouter(tags=["chat"])
+
+# As duas conversas -- do time e da tarefa -- sao a mesma coisa com escopo
+# diferente. Os handlers abaixo so resolvem qual e o escopo e delegam para as
+# funcoes compartilhadas.
 
 
-@router.get("", name="listar_mensagens")
+# --- Conversa do time ----------------------------------------------------
+
+
+@router.get("/times/{team_id}/mensagens", name="listar_mensagens")
 async def listar_mensagens(
     session: SessaoDep,
     ctx: ContextoDep,
     team_id: UUID,
     antes_de: Annotated[datetime | None, Query()] = None,
 ) -> PaginaDeMensagens:
-    """Conversa do time. Sem `antes_de`, devolve o trecho mais recente."""
-    mensagens, cursor = await chat_service.lista_mensagens(
-        session, ctx, team_id, antes_de=antes_de
-    )
-    return PaginaDeMensagens(mensagens=[_serializa(m) for m in mensagens], cursor=cursor)
+    return await _lista(session, ctx, Conversa.do_time(team_id), antes_de)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, name="enviar_mensagem")
+@router.post(
+    "/times/{team_id}/mensagens",
+    status_code=status.HTTP_201_CREATED,
+    name="enviar_mensagem",
+)
 async def enviar_mensagem(
     session: SessaoDep,
     ctx: ContextoDep,
@@ -41,30 +49,149 @@ async def enviar_mensagem(
     body: Annotated[str, Form()] = "",
     arquivos: Annotated[list[UploadFile], File()] = [],  # noqa: B006
 ) -> Mensagem:
-    """Envia mensagem com ou sem anexos.
-
-    Multipart sempre, mesmo para texto puro: um caminho so evita ter duas
-    rotas fazendo a mesma coisa com formatos diferentes.
-    """
-    recebidos = [await _le_arquivo(arquivo) for arquivo in arquivos if arquivo.filename]
-
-    mensagem = await chat_service.envia_mensagem(
-        session,
-        ctx,
-        team_id,
-        MensagemCriar(body=body),
-        arquivos=recebidos,
-        armazenamento=armazenamento,
+    return await _envia(
+        session, ctx, armazenamento, Conversa.do_time(team_id), body, arquivos, background
     )
-    notifica_mensagens(background, team_id)
-    return _serializa(mensagem)
 
 
-@router.delete("/{message_id}", name="excluir_mensagem")
+@router.delete("/times/{team_id}/mensagens/{message_id}", name="excluir_mensagem")
 async def excluir_mensagem(
     session: SessaoDep,
     ctx: ContextoDep,
     team_id: UUID,
+    message_id: UUID,
+    background: BackgroundTasks,
+) -> Mensagem:
+    return await _exclui(session, ctx, Conversa.do_time(team_id), message_id, background)
+
+
+@router.get("/times/{team_id}/mensagens/anexos/{anexo_id}", name="baixar_anexo")
+async def baixar_anexo(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    armazenamento: ArmazenamentoDep,
+    team_id: UUID,
+    anexo_id: UUID,
+) -> Response:
+    return await _baixa(session, ctx, armazenamento, Conversa.do_time(team_id), anexo_id)
+
+
+# --- Conversa da tarefa --------------------------------------------------
+
+
+@router.get("/tarefas/{task_id}/mensagens", name="listar_mensagens_da_tarefa")
+async def listar_mensagens_da_tarefa(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    task_id: UUID,
+    antes_de: Annotated[datetime | None, Query()] = None,
+) -> PaginaDeMensagens:
+    return await _lista(session, ctx, await _conversa_da_tarefa(session, ctx, task_id), antes_de)
+
+
+@router.post(
+    "/tarefas/{task_id}/mensagens",
+    status_code=status.HTTP_201_CREATED,
+    name="enviar_mensagem_na_tarefa",
+)
+async def enviar_mensagem_na_tarefa(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    armazenamento: ArmazenamentoDep,
+    task_id: UUID,
+    background: BackgroundTasks,
+    body: Annotated[str, Form()] = "",
+    arquivos: Annotated[list[UploadFile], File()] = [],  # noqa: B006
+) -> Mensagem:
+    conversa = await _conversa_da_tarefa(session, ctx, task_id)
+    return await _envia(
+        session, ctx, armazenamento, conversa, body, arquivos, background
+    )
+
+
+@router.delete(
+    "/tarefas/{task_id}/mensagens/{message_id}", name="excluir_mensagem_da_tarefa"
+)
+async def excluir_mensagem_da_tarefa(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    task_id: UUID,
+    message_id: UUID,
+    background: BackgroundTasks,
+) -> Mensagem:
+    conversa = await _conversa_da_tarefa(session, ctx, task_id)
+    return await _exclui(session, ctx, conversa, message_id, background)
+
+
+@router.get(
+    "/tarefas/{task_id}/mensagens/anexos/{anexo_id}", name="baixar_anexo_da_tarefa"
+)
+async def baixar_anexo_da_tarefa(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    armazenamento: ArmazenamentoDep,
+    task_id: UUID,
+    anexo_id: UUID,
+) -> Response:
+    conversa = await _conversa_da_tarefa(session, ctx, task_id)
+    return await _baixa(session, ctx, armazenamento, conversa, anexo_id)
+
+
+# --- Compartilhado -------------------------------------------------------
+
+
+async def _conversa_da_tarefa(
+    session: SessaoDep, ctx: ContextoDep, task_id: UUID
+) -> Conversa:
+    """Resolve o time a partir da tarefa.
+
+    Passa por `obtem_tarefa` de proposito: assim a conversa herda exatamente a
+    mesma regra de visibilidade da tarefa, inclusive o 404 para quem nao e do
+    time.
+    """
+    tarefa = await task_service.obtem_tarefa(session, ctx, task_id)
+    return Conversa.da_tarefa(tarefa.team_id, tarefa.id)
+
+
+async def _lista(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    conversa: Conversa,
+    antes_de: datetime | None,
+) -> PaginaDeMensagens:
+    mensagens, cursor = await chat_service.lista_mensagens(
+        session, ctx, conversa, antes_de=antes_de
+    )
+    return PaginaDeMensagens(mensagens=[_serializa(m) for m in mensagens], cursor=cursor)
+
+
+async def _envia(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    armazenamento: ArmazenamentoDep,
+    conversa: Conversa,
+    body: str,
+    arquivos: list[UploadFile],
+    background: BackgroundTasks,
+) -> Mensagem:
+    recebidos = [await _le_arquivo(a) for a in arquivos if a.filename]
+
+    mensagem = await chat_service.envia_mensagem(
+        session,
+        ctx,
+        conversa,
+        MensagemCriar(body=body),
+        arquivos=recebidos,
+        armazenamento=armazenamento,
+    )
+    notifica_mensagens(background, conversa.team_id, task_id=conversa.task_id)
+    return _serializa(mensagem)
+
+
+async def _exclui(
+    session: SessaoDep,
+    ctx: ContextoDep,
+    conversa: Conversa,
     message_id: UUID,
     background: BackgroundTasks,
 ) -> Mensagem:
@@ -73,17 +200,16 @@ async def excluir_mensagem(
     O cliente precisa do registro para manter a lacuna na conversa -- some-la
     da lista reordenaria tudo abaixo dela.
     """
-    mensagem = await chat_service.exclui_mensagem(session, ctx, team_id, message_id)
-    notifica_mensagens(background, team_id)
+    mensagem = await chat_service.exclui_mensagem(session, ctx, conversa, message_id)
+    notifica_mensagens(background, conversa.team_id, task_id=conversa.task_id)
     return _serializa(mensagem)
 
 
-@router.get("/anexos/{anexo_id}", name="baixar_anexo")
-async def baixar_anexo(
+async def _baixa(
     session: SessaoDep,
     ctx: ContextoDep,
     armazenamento: ArmazenamentoDep,
-    team_id: UUID,
+    conversa: Conversa,
     anexo_id: UUID,
 ) -> Response:
     """Serve o anexo, com os cabecalhos que impedem o arquivo de virar ataque.
@@ -95,7 +221,7 @@ async def baixar_anexo(
     - `Content-Security-Policy: sandbox` como ultima barreira, caso algum tipo
       escape das duas regras acima.
     """
-    anexo = await chat_service.obtem_anexo(session, ctx, team_id, anexo_id)
+    anexo = await chat_service.obtem_anexo(session, ctx, conversa, anexo_id)
     conteudo = await armazenamento.le(anexo.storage_key)
 
     disposicao = "inline" if e_imagem(anexo.content_type) else "attachment"

@@ -21,5 +21,13 @@ class Evento:
     tipo: TipoDeEvento
     team_id: UUID
 
-    def como_json(self) -> dict[str, str]:
-        return {"tipo": self.tipo.value, "team_id": str(self.team_id)}
+    # Presente quando o evento e de uma conversa de tarefa. Sem ele, o cliente
+    # teria que recarregar todas as conversas do time a cada mensagem.
+    task_id: UUID | None = None
+
+    def como_json(self) -> dict[str, str | None]:
+        return {
+            "tipo": self.tipo.value,
+            "team_id": str(self.team_id),
+            "task_id": str(self.task_id) if self.task_id else None,
+        }

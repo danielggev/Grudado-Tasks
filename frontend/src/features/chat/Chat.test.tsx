@@ -3,10 +3,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderizaComProviders } from "../../test-utils";
 import type { Mensagem } from "./api";
-import { ChatDoTime } from "./ChatDoTime";
+import { Chat } from "./Chat";
 
-const EU = { id: "u-eu", email: "eu@grudadoemvoce.com.br", name: "Daniel", avatar_url: null };
-const ANA = { id: "u-ana", email: "ana@grudadoemvoce.com.br", name: "Ana", avatar_url: null };
+const EU = {
+  id: "u-eu",
+  email: "eu@grudadoemvoce.com.br",
+  name: "Daniel",
+  avatar_url: null,
+};
+const ANA = {
+  id: "u-ana",
+  email: "ana@grudadoemvoce.com.br",
+  name: "Ana",
+  avatar_url: null,
+};
 
 function mensagem(extra: Partial<Mensagem> = {}): Mensagem {
   return {
@@ -32,7 +42,12 @@ function servidorFalso(mensagens: Mensagem[]) {
         });
 
       if (url.includes("/auth/me")) {
-        return json({ ...EU, org_role: "member", times: [], times_como_lead: [] });
+        return json({
+          ...EU,
+          org_role: "member",
+          times: [],
+          times_como_lead: [],
+        });
       }
       if (url.includes("/mensagens")) return json({ mensagens, cursor: null });
       return new Response("{}", { status: 404 });
@@ -42,17 +57,31 @@ function servidorFalso(mensagens: Mensagem[]) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("ChatDoTime", () => {
+describe("Chat", () => {
   it("mostra o vazio antes de existir conversa", async () => {
     servidorFalso([]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
-    expect(await screen.findByText(/Nenhuma mensagem ainda/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Nenhuma mensagem ainda/),
+    ).toBeInTheDocument();
   });
 
   it("chama de 'Você' as proprias mensagens", async () => {
     servidorFalso([mensagem({ autor: EU })]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     expect(await screen.findByText("Você")).toBeInTheDocument();
     expect(screen.queryByText("Daniel")).not.toBeInTheDocument();
@@ -60,10 +89,24 @@ describe("ChatDoTime", () => {
 
   it("agrupa mensagens seguidas da mesma pessoa sem repetir o nome", async () => {
     servidorFalso([
-      mensagem({ id: "m1", body: "primeira", created_at: "2026-08-06T12:00:00Z" }),
-      mensagem({ id: "m2", body: "segunda", created_at: "2026-08-06T12:01:00Z" }),
+      mensagem({
+        id: "m1",
+        body: "primeira",
+        created_at: "2026-08-06T12:00:00Z",
+      }),
+      mensagem({
+        id: "m2",
+        body: "segunda",
+        created_at: "2026-08-06T12:01:00Z",
+      }),
     ]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     await screen.findByText("primeira");
     // As duas aparecem, mas o nome so uma vez -- repeti-lo a cada linha poluiria.
@@ -74,9 +117,19 @@ describe("ChatDoTime", () => {
   it("nao agrupa quando ha muito tempo entre as mensagens", async () => {
     servidorFalso([
       mensagem({ id: "m1", body: "cedo", created_at: "2026-08-06T12:00:00Z" }),
-      mensagem({ id: "m2", body: "muito depois", created_at: "2026-08-06T14:00:00Z" }),
+      mensagem({
+        id: "m2",
+        body: "muito depois",
+        created_at: "2026-08-06T14:00:00Z",
+      }),
     ]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     await screen.findByText("cedo");
     expect(screen.getAllByText("Ana")).toHaveLength(2);
@@ -84,14 +137,26 @@ describe("ChatDoTime", () => {
 
   it("mensagem apagada deixa a lacuna, nao some", async () => {
     servidorFalso([mensagem({ body: "", excluida: true })]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     expect(await screen.findByText("Mensagem apagada")).toBeInTheDocument();
   });
 
   it("membro comum nao pode apagar a mensagem de outra pessoa", async () => {
     servidorFalso([mensagem({ autor: ANA })]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     await screen.findByText("Bom dia");
     expect(
@@ -101,7 +166,13 @@ describe("ChatDoTime", () => {
 
   it("quem modera apaga a mensagem de qualquer um", async () => {
     servidorFalso([mensagem({ autor: ANA })]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar
+      />,
+    );
 
     await waitFor(() =>
       expect(
@@ -112,7 +183,13 @@ describe("ChatDoTime", () => {
 
   it("qualquer um apaga a propria mensagem", async () => {
     servidorFalso([mensagem({ autor: EU })]);
-    renderizaComProviders(<ChatDoTime teamId="t1" podeModerar={false} />);
+    renderizaComProviders(
+      <Chat
+        escopo={{ tipo: "time", teamId: "t1" }}
+        titulo="Conversa do time"
+        podeModerar={false}
+      />,
+    );
 
     await waitFor(() =>
       expect(

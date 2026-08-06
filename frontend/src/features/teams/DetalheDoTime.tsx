@@ -11,7 +11,7 @@ import {
   MenuSuspenso,
   SeparadorDeMenu,
 } from "../../components/ui/MenuSuspenso";
-import { ChatDoTime } from "../chat/ChatDoTime";
+import { Chat } from "../chat/Chat";
 import { Board } from "../tasks/Board";
 import { DetalheDaTarefa } from "../tasks/DetalheDaTarefa";
 import { DialogoDeTarefa } from "../tasks/DialogoDeTarefa";
@@ -250,7 +250,11 @@ export function DetalheDoTime() {
             limite proprio para rolar por dentro, senao a pagina inteira e que
             rolaria e o campo de escrever sumiria do alcance. */}
         <div className="min-h-96 lg:h-[calc(100vh-13rem)]">
-          <ChatDoTime teamId={time.id} podeModerar={gerencia} />
+          <Chat
+            escopo={{ tipo: "time", teamId: time.id }}
+            titulo="Conversa do time"
+            podeModerar={gerencia}
+          />
         </div>
       </div>
 

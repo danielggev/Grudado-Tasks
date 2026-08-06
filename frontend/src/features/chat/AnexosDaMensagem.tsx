@@ -1,4 +1,4 @@
-import type { Anexo } from "./api";
+import type { Anexo, Escopo } from "./api";
 import { urlDoAnexo } from "./api";
 import { formataTamanho } from "./tamanho";
 
@@ -11,10 +11,10 @@ import { formataTamanho } from "./tamanho";
  */
 export function AnexosDaMensagem({
   anexos,
-  teamId,
+  escopo,
 }: {
   anexos: Anexo[];
-  teamId: string;
+  escopo: Escopo;
 }) {
   if (anexos.length === 0) return null;
 
@@ -28,14 +28,14 @@ export function AnexosDaMensagem({
           {imagens.map((anexo) => (
             <a
               key={anexo.id}
-              href={urlDoAnexo(teamId, anexo.id)}
+              href={urlDoAnexo(escopo, anexo.id)}
               target="_blank"
               rel="noreferrer"
               title={`${anexo.filename} · ${formataTamanho(anexo.size_bytes)}`}
               className="block overflow-hidden rounded-xl border border-borda transition hover:border-azul-claro"
             >
               <img
-                src={urlDoAnexo(teamId, anexo.id)}
+                src={urlDoAnexo(escopo, anexo.id)}
                 alt={anexo.filename}
                 loading="lazy"
                 className="max-h-44 max-w-full object-cover"
@@ -48,7 +48,7 @@ export function AnexosDaMensagem({
       {arquivos.map((anexo) => (
         <a
           key={anexo.id}
-          href={urlDoAnexo(teamId, anexo.id)}
+          href={urlDoAnexo(escopo, anexo.id)}
           // `download` reforca o Content-Disposition que o servidor ja manda.
           download={anexo.filename}
           className="flex items-center gap-2 rounded-xl border border-borda bg-superficie-2 px-2.5 py-2 transition hover:border-azul-claro"

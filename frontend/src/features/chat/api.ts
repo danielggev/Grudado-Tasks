@@ -5,23 +5,43 @@ export type Mensagem = components["schemas"]["Mensagem"];
 export type Anexo = components["schemas"]["Anexo"];
 export type PaginaDeMensagens = components["schemas"]["PaginaDeMensagens"];
 
-const rota = (teamId: string) => `/api/v1/times/${teamId}/mensagens`;
+/**
+ * Onde a conversa acontece.
+ *
+ * Espelha o `Conversa` do backend: as duas sao a mesma conversa com escopo
+ * diferente, e tratar assim aqui tambem evita duplicar componente, hook e
+ * cache para algo que so muda de endereco.
+ */
+export type Escopo =
+  | { tipo: "time"; teamId: string }
+  | { tipo: "tarefa"; teamId: string; taskId: string };
+
+function rota(escopo: Escopo): string {
+  return escopo.tipo === "time"
+    ? `/api/v1/times/${escopo.teamId}/mensagens`
+    : `/api/v1/tarefas/${escopo.taskId}/mensagens`;
+}
+
+/** Identidade estavel do escopo, para chave de cache. */
+export function idDoEscopo(escopo: Escopo): string {
+  return escopo.tipo === "time" ? `time:${escopo.teamId}` : `tarefa:${escopo.taskId}`;
+}
 
 /** URL do anexo. Passa pela API porque o acesso depende do time. */
-export function urlDoAnexo(teamId: string, anexoId: string): string {
-  return `${rota(teamId)}/anexos/${anexoId}`;
+export function urlDoAnexo(escopo: Escopo, anexoId: string): string {
+  return `${rota(escopo)}/anexos/${anexoId}`;
 }
 
 export function listaMensagens(
-  teamId: string,
+  escopo: Escopo,
   antesDe?: string,
 ): Promise<PaginaDeMensagens> {
   const query = antesDe ? `?antes_de=${encodeURIComponent(antesDe)}` : "";
-  return apiFetch<PaginaDeMensagens>(`${rota(teamId)}${query}`);
+  return apiFetch<PaginaDeMensagens>(`${rota(escopo)}${query}`);
 }
 
 export function enviaMensagem(
-  teamId: string,
+  escopo: Escopo,
   body: string,
   arquivos: File[] = [],
 ): Promise<Mensagem> {
@@ -31,9 +51,9 @@ export function enviaMensagem(
 
   // Sem Content-Type: o navegador precisa gerar o boundary do multipart.
   // Defini-lo a mao quebraria o parse no servidor.
-  return apiFetch<Mensagem>(rota(teamId), { method: "POST", body: dados });
+  return apiFetch<Mensagem>(rota(escopo), { method: "POST", body: dados });
 }
 
-export function excluiMensagem(teamId: string, messageId: string): Promise<Mensagem> {
-  return apiFetch<Mensagem>(`${rota(teamId)}/${messageId}`, { method: "DELETE" });
+export function excluiMensagem(escopo: Escopo, messageId: string): Promise<Mensagem> {
+  return apiFetch<Mensagem>(`${rota(escopo)}/${messageId}`, { method: "DELETE" });
 }

@@ -1,7 +1,8 @@
 export type EventoDoServidor =
-  | { tipo: "tarefas_mudaram"; team_id: string }
-  | { tipo: "time_mudou"; team_id: string }
-  | { tipo: "mensagens_mudaram"; team_id: string }
+  | { tipo: "tarefas_mudaram"; team_id: string; task_id: string | null }
+  | { tipo: "time_mudou"; team_id: string; task_id: string | null }
+  // `task_id` distingue a conversa do time (nulo) da conversa de uma tarefa.
+  | { tipo: "mensagens_mudaram"; team_id: string; task_id: string | null }
   | { tipo: "ping" };
 
 const RECONEXAO_INICIAL_MS = 1_000;

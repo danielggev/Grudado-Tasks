@@ -12,7 +12,7 @@ import { Aviso } from "../../components/ui/Aviso";
 import { Esqueleto } from "../../components/ui/Esqueleto";
 import { useUsuarioAtual } from "../auth/hooks";
 import { AnexosDaMensagem } from "./AnexosDaMensagem";
-import type { Mensagem } from "./api";
+import type { Escopo, Mensagem } from "./api";
 import { formataTamanho } from "./tamanho";
 import {
   useConversa,
@@ -49,20 +49,25 @@ const DIA = new Intl.DateTimeFormat("pt-BR", {
   year: "numeric",
 });
 
-export function ChatDoTime({
-  teamId,
+export function Chat({
+  escopo,
+  titulo,
   podeModerar,
+  compacto = false,
 }: {
-  teamId: string;
+  escopo: Escopo;
+  titulo: string;
   /** Lead e admin apagam mensagem de qualquer um; o resto so a propria. */
   podeModerar: boolean;
+  /** Dentro do dialogo de tarefa ha menos espaco que na tela do time. */
+  compacto?: boolean;
 }) {
   const { mensagens, carregando, erro, haAnteriores, carregandoAnteriores, carregaAnteriores } =
-    useConversa(teamId);
+    useConversa(escopo);
   const { data: eu } = useUsuarioAtual();
-  const enviar = useEnviarMensagem(teamId);
+  const enviar = useEnviarMensagem(escopo);
 
-  useSincronizacaoDaConversa(teamId);
+  useSincronizacaoDaConversa(escopo);
 
   const [texto, setTexto] = useState("");
   const [arquivos, setArquivos] = useState<File[]>([]);
@@ -119,9 +124,7 @@ export function ChatDoTime({
     <section className="flex min-h-0 flex-col overflow-hidden rounded-card border border-borda bg-superficie shadow-suave">
       <header className="flex shrink-0 items-center gap-2 border-b border-borda px-4 py-2.5">
         <IconeBalao />
-        <h2 className="text-xs font-black tracking-wide text-texto uppercase">
-          Conversa do time
-        </h2>
+        <h2 className="text-xs font-black tracking-wide text-texto uppercase">{titulo}</h2>
       </header>
 
       <div ref={rolagem} className="flex-1 overflow-y-auto px-4 py-3">
@@ -137,10 +140,12 @@ export function ChatDoTime({
         ) : erro ? (
           <Aviso erro={erro} />
         ) : mensagens.length === 0 ? (
-          <p className="py-10 text-center text-xs text-texto-suave">
+          <p className={`text-center text-xs text-texto-suave ${compacto ? "py-6" : "py-10"}`}>
             Nenhuma mensagem ainda.
             <br />
-            Comece a conversa do time por aqui.
+            {escopo.tipo === "tarefa"
+              ? "Combine os detalhes desta tarefa por aqui."
+              : "Comece a conversa do time por aqui."}
           </p>
         ) : (
           <>
@@ -165,7 +170,7 @@ export function ChatDoTime({
                   anterior={mensagens[indice - 1]}
                   souEu={mensagem.autor.id === eu?.id}
                   podeApagar={podeModerar || mensagem.autor.id === eu?.id}
-                  teamId={teamId}
+                  escopo={escopo}
                 />
               ))}
             </ol>
@@ -265,15 +270,15 @@ function ItemDeMensagem({
   anterior,
   souEu,
   podeApagar,
-  teamId,
+  escopo,
 }: {
   mensagem: Mensagem;
   anterior: Mensagem | undefined;
   souEu: boolean;
   podeApagar: boolean;
-  teamId: string;
+  escopo: Escopo;
 }) {
-  const excluir = useExcluirMensagem(teamId);
+  const excluir = useExcluirMensagem(escopo);
 
   const quando = new Date(mensagem.created_at);
   const diaAnterior = anterior ? new Date(anterior.created_at).toDateString() : null;
@@ -322,7 +327,7 @@ function ItemDeMensagem({
                   {mensagem.body}
                 </p>
               )}
-              <AnexosDaMensagem anexos={mensagem.anexos} teamId={teamId} />
+              <AnexosDaMensagem anexos={mensagem.anexos} escopo={escopo} />
             </>
           )}
         </div>

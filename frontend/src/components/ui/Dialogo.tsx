@@ -5,7 +5,7 @@ type Props = {
   titulo: string;
   aoFechar: () => void;
   children: ReactNode;
-  largura?: "media" | "larga";
+  largura?: "media" | "larga" | "ampla";
 };
 
 /**
@@ -31,7 +31,7 @@ export function Dialogo({ aberto, titulo, aoFechar, children, largura = "media" 
       // React acharia que o dialogo continua aberto.
       onClose={aoFechar}
       className={`m-auto w-full rounded-card border border-borda bg-superficie p-0 text-texto shadow-alta backdrop:bg-azul-escuro/50 backdrop:backdrop-blur-sm ${
-        largura === "larga" ? "max-w-2xl" : "max-w-md"
+        { media: "max-w-md", larga: "max-w-2xl", ampla: "max-w-5xl" }[largura]
       }`}
     >
       <div className="flex items-center justify-between gap-4 border-b border-borda px-5 py-3.5">
