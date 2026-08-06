@@ -14,6 +14,8 @@ dependencies = [
     "itsdangerous>=2.2",
     "joserfc>=1.0",
     "httpx>=0.28",
+    # Upload de anexo no chat chega como multipart/form-data.
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

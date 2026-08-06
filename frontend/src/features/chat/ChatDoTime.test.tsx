@@ -15,6 +15,7 @@ function mensagem(extra: Partial<Mensagem> = {}): Mensagem {
     body: "Bom dia",
     created_at: "2026-08-06T12:00:00Z",
     excluida: false,
+    anexos: [],
     ...extra,
   };
 }

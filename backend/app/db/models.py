@@ -2,7 +2,18 @@ from datetime import date, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, String, Text, Uuid, func
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -182,6 +193,37 @@ class Message(Base):
     )
 
     author: Mapped[User] = relationship()
+    anexos: Mapped[list["Attachment"]] = relationship(
+        back_populates="message", cascade="all, delete-orphan"
+    )
+
+
+class Attachment(Base):
+    """Arquivo enviado junto de uma mensagem.
+
+    O conteudo vive no armazenamento (disco hoje, ver app/storage); aqui fica
+    so o metadado e a `storage_key` que aponta para ele.
+    """
+
+    __tablename__ = "attachments"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    message_id: Mapped[UUID] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+
+    # Nome que a pessoa vera ao baixar. Nunca usado para montar caminho em
+    # disco -- o caminho vem de storage_key, gerado pelo servidor.
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    storage_key: Mapped[str] = mapped_column(String(255))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+
+    message: Mapped[Message] = relationship(back_populates="anexos")
 
 
 class ActivityLog(Base):

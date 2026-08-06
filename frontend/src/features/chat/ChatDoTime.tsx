@@ -1,16 +1,46 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { Avatar } from "../../app/Layout";
 import { Aviso } from "../../components/ui/Aviso";
 import { Esqueleto } from "../../components/ui/Esqueleto";
 import { useUsuarioAtual } from "../auth/hooks";
+import { AnexosDaMensagem } from "./AnexosDaMensagem";
 import type { Mensagem } from "./api";
+import { formataTamanho } from "./tamanho";
 import {
   useConversa,
   useEnviarMensagem,
   useExcluirMensagem,
   useSincronizacaoDaConversa,
 } from "./hooks";
+
+/** Espelha o limite do backend (domain/anexos.py) só para evitar a viagem. */
+const MAXIMO_DE_ANEXOS = 5;
+
+/** Filtro do seletor de arquivos; a lista que vale é a do servidor. */
+const TIPOS_ACEITOS = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  ".pdf",
+  ".txt",
+  ".csv",
+  ".zip",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+].join(",");
 
 const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const DIA = new Intl.DateTimeFormat("pt-BR", {
@@ -35,6 +65,8 @@ export function ChatDoTime({
   useSincronizacaoDaConversa(teamId);
 
   const [texto, setTexto] = useState("");
+  const [arquivos, setArquivos] = useState<File[]>([]);
+  const seletor = useRef<HTMLInputElement>(null);
   const rolagem = useRef<HTMLDivElement>(null);
   const ultimaId = mensagens.at(-1)?.id;
 
@@ -49,11 +81,30 @@ export function ChatDoTime({
   function envia(evento: FormEvent) {
     evento.preventDefault();
     const corpo = texto.trim();
-    if (!corpo) return;
+    if (!corpo && arquivos.length === 0) return;
+
     // Limpa antes da resposta: a mensagem reaparece pela query, e esperar o
     // servidor para liberar o campo trava quem escreve rapido.
     setTexto("");
-    enviar.mutate(corpo);
+    setArquivos([]);
+    enviar.mutate({ body: corpo, arquivos });
+  }
+
+  function adiciona(novos: FileList | null) {
+    if (!novos?.length) return;
+    setArquivos((atual) => [...atual, ...Array.from(novos)].slice(0, MAXIMO_DE_ANEXOS));
+    // Zera o input: sem isso, escolher o mesmo arquivo duas vezes seguidas
+    // nao dispara `change` e parece que nada aconteceu.
+    if (seletor.current) seletor.current.value = "";
+  }
+
+  /** Ctrl+V de um print cola direto, sem passar por salvar em arquivo. */
+  function cola(evento: ClipboardEvent<HTMLTextAreaElement>) {
+    const doArea = Array.from(evento.clipboardData.files);
+    if (doArea.length > 0) {
+      evento.preventDefault();
+      setArquivos((atual) => [...atual, ...doArea].slice(0, MAXIMO_DE_ANEXOS));
+    }
   }
 
   function atalho(evento: KeyboardEvent<HTMLTextAreaElement>) {
@@ -123,20 +174,80 @@ export function ChatDoTime({
       </div>
 
       <form onSubmit={envia} className="shrink-0 border-t border-borda p-2.5">
+        {arquivos.length > 0 && (
+          <ul className="mb-2 flex flex-wrap gap-1.5">
+            {arquivos.map((arquivo, indice) => (
+              <li
+                key={`${arquivo.name}-${indice}`}
+                className="flex items-center gap-1.5 rounded-full bg-superficie-2 py-1 pr-1 pl-2.5"
+              >
+                <span className="max-w-40 truncate text-[11px] font-semibold text-texto">
+                  {arquivo.name}
+                </span>
+                <span className="text-[10px] text-texto-suave">
+                  {formataTamanho(arquivo.size)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setArquivos((atual) => atual.filter((_, i) => i !== indice))
+                  }
+                  aria-label={`Remover ${arquivo.name}`}
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-texto-suave transition hover:bg-rosa/15 hover:text-rosa"
+                >
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <div className="flex items-end gap-2">
+          <input
+            ref={seletor}
+            type="file"
+            multiple
+            hidden
+            accept={TIPOS_ACEITOS}
+            onChange={(e) => adiciona(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => seletor.current?.click()}
+            disabled={arquivos.length >= MAXIMO_DE_ANEXOS}
+            aria-label="Anexar arquivo"
+            title={
+              arquivos.length >= MAXIMO_DE_ANEXOS
+                ? `Máximo de ${MAXIMO_DE_ANEXOS} arquivos`
+                : "Anexar arquivo"
+            }
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-texto-suave transition hover:bg-superficie-2 hover:text-texto disabled:opacity-40"
+          >
+            <IconeClipe />
+          </button>
+
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             onKeyDown={atalho}
+            onPaste={cola}
             rows={1}
             maxLength={4000}
             placeholder="Escreva para o time..."
             aria-label="Mensagem"
             className="max-h-28 min-h-9 flex-1 resize-none rounded-xl border border-borda bg-superficie px-3 py-2 text-sm outline-none transition focus:border-azul-claro"
           />
+
           <button
             type="submit"
-            disabled={!texto.trim()}
+            disabled={(!texto.trim() && arquivos.length === 0) || enviar.isPending}
             aria-label="Enviar mensagem"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-verde text-azul-escuro transition hover:brightness-95 disabled:opacity-40"
           >
@@ -205,9 +316,14 @@ function ItemDeMensagem({
           {mensagem.excluida ? (
             <p className="text-xs text-texto-suave italic">Mensagem apagada</p>
           ) : (
-            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-texto">
-              {mensagem.body}
-            </p>
+            <>
+              {mensagem.body && (
+                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-texto">
+                  {mensagem.body}
+                </p>
+              )}
+              <AnexosDaMensagem anexos={mensagem.anexos} teamId={teamId} />
+            </>
           )}
         </div>
 
@@ -259,6 +375,20 @@ function IconeBalao() {
         d="M21 12a8 8 0 01-8 8H4l2.2-2.6A8 8 0 1121 12z"
         stroke="currentColor"
         strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconeClipe() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M21 11.5l-8.6 8.6a5 5 0 01-7-7l8.9-8.9a3.3 3.3 0 014.7 4.7l-8.9 8.9a1.7 1.7 0 01-2.3-2.3l8.2-8.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>

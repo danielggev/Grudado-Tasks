@@ -35,6 +35,12 @@ services:
       ALLOWED_HOSTED_DOMAIN: ${ALLOWED_HOSTED_DOMAIN}
       FRONTEND_URL: https://${DOMINIO}
       CORS_ORIGINS: '["https://${DOMINIO}"]'
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      # ATENCAO: este volume precisa entrar na rotina de backup junto com o
+      # Postgres. Fazer backup so do banco deixaria os registros de anexo
+      # apontando para arquivos que nao existem mais.
+      - uploads:/app/uploads
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
@@ -56,5 +62,6 @@ services:
 
 volumes:
   postgres-data:
+  uploads:
   caddy-data:
   caddy-config:

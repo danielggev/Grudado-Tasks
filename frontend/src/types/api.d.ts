@@ -310,8 +310,41 @@ export interface paths {
          */
         get: operations["listar_mensagens"];
         put?: never;
-        /** Enviar Mensagem */
+        /**
+         * Enviar Mensagem
+         * @description Envia mensagem com ou sem anexos.
+         *
+         *     Multipart sempre, mesmo para texto puro: um caminho so evita ter duas
+         *     rotas fazendo a mesma coisa com formatos diferentes.
+         */
         post: operations["enviar_mensagem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/times/{team_id}/mensagens/anexos/{anexo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixar Anexo
+         * @description Serve o anexo, com os cabecalhos que impedem o arquivo de virar ataque.
+         *
+         *     - `nosniff`: sem ele o navegador pode ignorar o Content-Type declarado e
+         *       interpretar o conteudo, o que transformaria um "png" em HTML executavel.
+         *     - `inline` so para imagens da lista permitida; todo o resto e baixado, e
+         *       nao aberto na mesma origem da sessao.
+         *     - `Content-Security-Policy: sandbox` como ultima barreira, caso algum tipo
+         *       escape das duas regras acima.
+         */
+        get: operations["baixar_anexo"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -426,6 +459,35 @@ export interface components {
         AlterarPapel: {
             role: components["schemas"]["TeamRole"];
         };
+        /** Anexo */
+        Anexo: {
+            /** Content Type */
+            content_type: string;
+            /** E Imagem */
+            e_imagem: boolean;
+            /** Filename */
+            filename: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** Body_enviar_mensagem */
+        Body_enviar_mensagem: {
+            /**
+             * Arquivos
+             * @default []
+             */
+            arquivos: string[];
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+        };
         /** EventoDeAtividade */
         EventoDeAtividade: {
             action: components["schemas"]["ActivityAction"];
@@ -462,6 +524,8 @@ export interface components {
         };
         /** Mensagem */
         Mensagem: {
+            /** Anexos */
+            anexos: components["schemas"]["Anexo"][];
             autor: components["schemas"]["UsuarioPublico"];
             /** Body */
             body: string;
@@ -477,11 +541,6 @@ export interface components {
              * Format: uuid
              */
             id: string;
-        };
-        /** MensagemCriar */
-        MensagemCriar: {
-            /** Body */
-            body: string;
         };
         /**
          * MoverTarefa
@@ -1544,9 +1603,9 @@ export interface operations {
                 grudado_session?: string | null;
             };
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["MensagemCriar"];
+                "multipart/form-data": components["schemas"]["Body_enviar_mensagem"];
             };
         };
         responses: {
@@ -1557,6 +1616,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Mensagem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    baixar_anexo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+                anexo_id: string;
+            };
+            cookie?: {
+                grudado_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

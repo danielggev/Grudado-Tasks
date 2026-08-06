@@ -57,7 +57,8 @@ export function useConversa(teamId: string) {
 export function useEnviarMensagem(teamId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) => enviaMensagem(teamId, body),
+    mutationFn: ({ body, arquivos }: { body: string; arquivos: File[] }) =>
+      enviaMensagem(teamId, body, arquivos),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: chaveDaConversa(teamId) }),
   });

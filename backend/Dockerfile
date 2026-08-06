@@ -16,7 +16,13 @@ COPY alembic ./alembic
 COPY app ./app
 
 # Processo nao-root: se o container for comprometido, o atacante nao herda root.
-RUN useradd --create-home --uid 1000 grudado && chown -R grudado:grudado /app
+#
+# O diretorio de uploads precisa existir na imagem, e nao so no compose: um
+# volume nomeado montado sobre um caminho existente herda o dono dele. Sem
+# isto, o volume nasceria de root e o processo nao conseguiria gravar anexo.
+RUN mkdir -p /app/uploads \
+    && useradd --create-home --uid 1000 grudado \
+    && chown -R grudado:grudado /app
 USER grudado
 
 EXPOSE 8000

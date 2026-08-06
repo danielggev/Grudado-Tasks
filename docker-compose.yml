@@ -30,11 +30,15 @@ services:
       # Mesmo motivo do VITE_WATCH_POLL: eventos de arquivo do Windows nao
       # atravessam o volume, e sem polling o --reload do uvicorn nao dispara.
       WATCHFILES_FORCE_POLLING: "true"
+      UPLOAD_DIR: /app/uploads
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
+      # Anexos do chat em volume nomeado: sem ele, recriar o container apagaria
+      # os arquivos e o banco ficaria apontando para o vazio.
+      - uploads:/app/uploads
     # Migracao antes de subir: o app nunca atende com schema defasado.
     command: >
       sh -c "alembic upgrade head &&
@@ -62,3 +66,4 @@ services:
 volumes:
   postgres-data:
   frontend-node-modules:
+  uploads:

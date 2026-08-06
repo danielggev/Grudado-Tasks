@@ -18,11 +18,17 @@ export class ApiError extends Error {
 type CorpoDeErro = { detail?: string; campo?: string };
 
 export async function apiFetch<T>(caminho: string, init: RequestInit = {}): Promise<T> {
+  // Com FormData o navegador precisa montar o Content-Type sozinho, incluindo
+  // o boundary do multipart. Defini-lo aqui quebraria o parse no servidor.
+  const ehFormulario = init.body instanceof FormData;
+
   const resposta = await fetch(caminho, {
     // O cookie de sessao e HttpOnly: o JS nunca o le, so pede ao navegador que o envie.
     credentials: "include",
     ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
+    headers: ehFormulario
+      ? init.headers
+      : { "Content-Type": "application/json", ...init.headers },
   });
 
   if (!resposta.ok) {

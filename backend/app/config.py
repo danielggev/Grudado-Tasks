@@ -1,5 +1,6 @@
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 from typing import Self
 
 from pydantic import SecretStr, model_validator
@@ -44,6 +45,11 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173"]
+
+    # Onde os anexos do chat sao gravados. Em producao aponta para um volume
+    # do Docker -- precisa entrar na rotina de backup junto com o Postgres,
+    # senao o banco referencia arquivos que nao existem mais.
+    upload_dir: Path = Path("uploads")
 
     @property
     def is_prod(self) -> bool:
